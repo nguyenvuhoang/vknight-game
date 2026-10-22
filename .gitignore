@@ -36,3 +36,24 @@ Thumbs.db
 
 # Deployment
 .vercel/
+
+# .NET
+**/bin/
+**/obj/
+
+# Node
+**/node_modules/
+**/.next/
+**/dist/
+
+# Environment
+**/.env
+**/.env.local
+
+**/node_modules/
+**/.next/
+**/bin/
+**/obj/
+**/.env
+**/.env.local
+**/.git.backup/
