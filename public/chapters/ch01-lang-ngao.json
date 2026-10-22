@@ -1,0 +1,524 @@
+{
+  "id": "ch01-lang-ngao",
+  "title": "Làng Ngáo",
+  "version": 1,
+  "levels": [
+    {
+      "id": "CH01_L01",
+      "number": 1,
+      "title": "Bước Ra Khỏi Nhà",
+      "story": "Mẹ bảo đi mua nước mắm, nhưng bạn lại đi cứu công chúa.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 650,
+          "y": 495,
+          "w": 1300,
+          "h": 50
+        },
+        {
+          "x": 1530,
+          "y": 495,
+          "w": 400,
+          "h": 50
+        }
+      ],
+      "hazards": [],
+      "npc": {
+        "x": 350,
+        "name": "Bà Tám",
+        "lines": {
+          "sword": "Ta có kiếm đây! Đã ăn sáng chưa?",
+          "professor": "Theo nghiên cứu của tôi: Đã ăn sáng chưa?",
+          "chairman": "Tôi gọi người quen nhé. Đã ăn sáng chưa?",
+          "angry": "Nhanh lên! Đã ăn sáng chưa?",
+          "comedian": "Ta là thanh tra bí mật! Đã ăn sáng chưa?"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#d8e9c3",
+      "difficulty": 1
+    },
+    {
+      "id": "CH01_L02",
+      "number": 2,
+      "title": "Con Chó Đầu Ngõ",
+      "story": "Chó nhà hàng xóm chặn đường. Nó không thích người lạ.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 650,
+          "y": 495,
+          "w": 1300,
+          "h": 50
+        },
+        {
+          "x": 1530,
+          "y": 495,
+          "w": 400,
+          "h": 50
+        }
+      ],
+      "hazards": [],
+      "npc": {
+        "x": 350,
+        "name": "Ông Hàng Xóm",
+        "lines": {
+          "sword": "Ta có kiếm đây! Con chó này chỉ sợ người biết hát.",
+          "professor": "Theo nghiên cứu của tôi: Con chó này chỉ sợ người biết hát.",
+          "chairman": "Tôi gọi người quen nhé. Con chó này chỉ sợ người biết hát.",
+          "angry": "Nhanh lên! Con chó này chỉ sợ người biết hát.",
+          "comedian": "Ta là thanh tra bí mật! Con chó này chỉ sợ người biết hát."
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#c5e9e9",
+      "difficulty": 2
+    },
+    {
+      "id": "CH01_L03",
+      "number": 3,
+      "title": "Hố Gà Quốc Dân",
+      "story": "Đường làng sửa mãi chưa xong, hố ngày càng sâu.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 385,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [],
+      "npc": {
+        "x": 650,
+        "name": "Thợ Sửa Đường",
+        "lines": {
+          "sword": "Ta có kiếm đây! Cẩn thận, công trình đã 3 năm chưa nghiệm thu.",
+          "professor": "Theo nghiên cứu của tôi: Cẩn thận, công trình đã 3 năm chưa nghiệm thu.",
+          "chairman": "Tôi gọi người quen nhé. Cẩn thận, công trình đã 3 năm chưa nghiệm thu.",
+          "angry": "Nhanh lên! Cẩn thận, công trình đã 3 năm chưa nghiệm thu.",
+          "comedian": "Ta là thanh tra bí mật! Cẩn thận, công trình đã 3 năm chưa nghiệm thu."
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#ffe0b8",
+      "difficulty": 3
+    },
+    {
+      "id": "CH01_L04",
+      "number": 4,
+      "title": "Ông Bán Phở",
+      "story": "Bạn đói và cần đi tiếp. Ông chủ lại muốn thu phí qua đường.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 385,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 960,
+          "y": 472,
+          "w": 36,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Chú Bán Phở",
+        "lines": {
+          "sword": "Ta có kiếm đây! Mua tô phở trước rồi mới nói chuyện.",
+          "professor": "Theo nghiên cứu của tôi: Mua tô phở trước rồi mới nói chuyện.",
+          "chairman": "Tôi gọi người quen nhé. Mua tô phở trước rồi mới nói chuyện.",
+          "angry": "Nhanh lên! Mua tô phở trước rồi mới nói chuyện.",
+          "comedian": "Ta là thanh tra bí mật! Mua tô phở trước rồi mới nói chuyện."
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#bbe7d5",
+      "difficulty": 4
+    },
+    {
+      "id": "CH01_L05",
+      "number": 5,
+      "title": "Cây Cầu Mất Tích",
+      "story": "Cầu gỗ đã gãy. Ông lão bên kia sông đang nhâm nhi trà.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 385,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 975,
+          "y": 472,
+          "w": 38,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Ông Lão",
+        "lines": {
+          "sword": "Ta có kiếm đây! Bên này có thuyền, nhưng ngươi định làm gì?",
+          "professor": "Theo nghiên cứu của tôi: Bên này có thuyền, nhưng ngươi định làm gì?",
+          "chairman": "Tôi gọi người quen nhé. Bên này có thuyền, nhưng ngươi định làm gì?",
+          "angry": "Nhanh lên! Bên này có thuyền, nhưng ngươi định làm gì?",
+          "comedian": "Ta là thanh tra bí mật! Bên này có thuyền, nhưng ngươi định làm gì?"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#d8e9c3",
+      "difficulty": 5
+    },
+    {
+      "id": "CH01_L06",
+      "number": 6,
+      "title": "Vườn Chuối Lạ",
+      "story": "Đường qua vườn chuối rất trơn, ai cũng đã ngã ít nhất một lần.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 365,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 990,
+          "y": 472,
+          "w": 40,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Bà Chủ Vườn",
+        "lines": {
+          "sword": "Ta có kiếm đây! Chuối không tự trơn, là do các ngươi hấp tấp.",
+          "professor": "Theo nghiên cứu của tôi: Chuối không tự trơn, là do các ngươi hấp tấp.",
+          "chairman": "Tôi gọi người quen nhé. Chuối không tự trơn, là do các ngươi hấp tấp.",
+          "angry": "Nhanh lên! Chuối không tự trơn, là do các ngươi hấp tấp.",
+          "comedian": "Ta là thanh tra bí mật! Chuối không tự trơn, là do các ngươi hấp tấp."
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#c5e9e9",
+      "difficulty": 6
+    },
+    {
+      "id": "CH01_L07",
+      "number": 7,
+      "title": "Bẫy Của Trẻ Con",
+      "story": "Một đám trẻ dựng bẫy và gọi đó là thử thách anh hùng.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 365,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 1005,
+          "y": 472,
+          "w": 42,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Nhóc Trùm",
+        "lines": {
+          "sword": "Ta có kiếm đây! Vượt được thì tụi em gọi là đại ca!",
+          "professor": "Theo nghiên cứu của tôi: Vượt được thì tụi em gọi là đại ca!",
+          "chairman": "Tôi gọi người quen nhé. Vượt được thì tụi em gọi là đại ca!",
+          "angry": "Nhanh lên! Vượt được thì tụi em gọi là đại ca!",
+          "comedian": "Ta là thanh tra bí mật! Vượt được thì tụi em gọi là đại ca!"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#ffe0b8",
+      "difficulty": 7
+    },
+    {
+      "id": "CH01_L08",
+      "number": 8,
+      "title": "Đường Đến Cổng Làng",
+      "story": "Người gác cổng tin rằng ai cũng phải trả lời câu hỏi.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 365,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 1020,
+          "y": 472,
+          "w": 44,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Gác Cổng",
+        "lines": {
+          "sword": "Ta có kiếm đây! Tên ngươi là gì? Nói thật đi!",
+          "professor": "Theo nghiên cứu của tôi: Tên ngươi là gì? Nói thật đi!",
+          "chairman": "Tôi gọi người quen nhé. Tên ngươi là gì? Nói thật đi!",
+          "angry": "Nhanh lên! Tên ngươi là gì? Nói thật đi!",
+          "comedian": "Ta là thanh tra bí mật! Tên ngươi là gì? Nói thật đi!"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#bbe7d5",
+      "difficulty": 8
+    },
+    {
+      "id": "CH01_L09",
+      "number": 9,
+      "title": "Cuộc Đua Với Vịt",
+      "story": "Vịt làng đòi đua để quyết định ai được đi tiếp.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 365,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 1035,
+          "y": 472,
+          "w": 46,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Vịt Đua",
+        "lines": {
+          "sword": "Ta có kiếm đây! Cạp cạp!",
+          "professor": "Theo nghiên cứu của tôi: Cạp cạp!",
+          "chairman": "Tôi gọi người quen nhé. Cạp cạp!",
+          "angry": "Nhanh lên! Cạp cạp!",
+          "comedian": "Ta là thanh tra bí mật! Cạp cạp!"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#d8e9c3",
+      "difficulty": 9
+    },
+    {
+      "id": "CH01_L10",
+      "number": 10,
+      "title": "Trưởng Làng Ngáo",
+      "story": "Muốn rời làng phải được trưởng làng đồng ý. Nhưng ông ấy đang ngủ.",
+      "width": 1900,
+      "spawn": {
+        "x": 75,
+        "y": 390
+      },
+      "groundY": 470,
+      "platforms": [
+        {
+          "x": 230,
+          "y": 495,
+          "w": 460,
+          "h": 50
+        },
+        {
+          "x": 680,
+          "y": 495,
+          "w": 365,
+          "h": 50
+        },
+        {
+          "x": 1220,
+          "y": 495,
+          "w": 950,
+          "h": 50
+        }
+      ],
+      "hazards": [
+        {
+          "x": 1050,
+          "y": 472,
+          "w": 48,
+          "h": 24
+        }
+      ],
+      "npc": {
+        "x": 650,
+        "name": "Trưởng Làng",
+        "lines": {
+          "sword": "Ta có kiếm đây! Ai làm ồn giờ nghỉ trưa đó?",
+          "professor": "Theo nghiên cứu của tôi: Ai làm ồn giờ nghỉ trưa đó?",
+          "chairman": "Tôi gọi người quen nhé. Ai làm ồn giờ nghỉ trưa đó?",
+          "angry": "Nhanh lên! Ai làm ồn giờ nghỉ trưa đó?",
+          "comedian": "Ta là thanh tra bí mật! Ai làm ồn giờ nghỉ trưa đó?"
+        },
+        "required": true
+      },
+      "exitX": 1600,
+      "bg": "#c5e9e9",
+      "difficulty": 10
+    }
+  ]
+}
