@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "PVOVW6Lm8XI=",
+  "dgSpecHash": "2biNVoT5iTU=",
   "success": true,
-  "projectFilePath": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\VKnight.Api.csproj",
+  "projectFilePath": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\VKnight.Api.csproj",
   "expectedPackageFiles": [
     "C:\\Users\\nguye\\.nuget\\packages\\microsoft.data.sqlite.core\\10.0.0\\microsoft.data.sqlite.core.10.0.0.nupkg.sha512",
     "C:\\Users\\nguye\\.nuget\\packages\\microsoft.entityframeworkcore\\10.0.0\\microsoft.entityframeworkcore.10.0.0.nupkg.sha512",
@@ -22,9 +22,9 @@
       "code": "NU1903",
       "level": "Warning",
       "message": "Package 'SQLitePCLRaw.lib.e_sqlite3' 2.1.11 has a known high severity vulnerability, https://github.com/advisories/GHSA-2m69-gcr7-jv3q",
-      "projectPath": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\VKnight.Api.csproj",
+      "projectPath": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\VKnight.Api.csproj",
       "warningLevel": 1,
-      "filePath": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\VKnight.Api.csproj",
+      "filePath": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\VKnight.Api.csproj",
       "libraryId": "SQLitePCLRaw.lib.e_sqlite3",
       "targetGraphs": [
         "net10.0"
