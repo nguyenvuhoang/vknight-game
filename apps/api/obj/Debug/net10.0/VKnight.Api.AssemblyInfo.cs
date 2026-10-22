@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("VKnight.Api")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+492dcd4aaf51107234075e7f295ea0e5c4bb0eab")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+881003418872a06a8c9f1f3ad5c9b613067a4959")]
 [assembly: System.Reflection.AssemblyProductAttribute("VKnight.Api")]
 [assembly: System.Reflection.AssemblyTitleAttribute("VKnight.Api")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
