@@ -5,6 +5,7 @@ import { HEROES, getHero } from "@/lib/heroes";
 import { loadChapter } from "@/lib/catalog";
 import { completed, getGuestId, saveLocal, syncProgress } from "@/lib/progress";
 import type { Chapter, HeroId, GameNotice } from "@/lib/types";
+import CharacterProfileModal from "./character-profile/CharacterProfileModal";
 const PhaserGame = dynamic(() => import("./PhaserGame"), { ssr: false });
 export default function GameClient() {
   const [hero, setHero] = useState<HeroId>("sword");
@@ -14,6 +15,7 @@ export default function GameClient() {
   const [notice, setNotice] = useState<GameNotice | null>(null);
   const [max, setMax] = useState(0);
   const [error, setError] = useState("");
+  const [profileHero, setProfileHero] = useState<HeroId | null>(null);
   useEffect(() => {
     loadChapter()
       .then(setChapter)
@@ -46,15 +48,29 @@ export default function GameClient() {
             {HEROES.map((h) => (
               <button
                 key={h.id}
+                type="button"
                 className={`hero-card ${hero === h.id ? "selected" : ""}`}
-                onClick={() => setHero(h.id)}
+                aria-haspopup="dialog"
+                aria-pressed={hero === h.id}
+                onClick={() => setProfileHero(h.id)}
               >
                 <img src={h.asset} alt={h.name} />
                 <strong>{h.name}</strong>
                 <small>{h.tagline}</small>
+                <span className="hero-card-hint">🔍 Xem hồ sơ</span>
               </button>
             ))}
           </div>
+          <CharacterProfileModal
+            heroId={profileHero}
+            selectedHeroId={hero}
+            isOpen={profileHero !== null}
+            onClose={() => setProfileHero(null)}
+            onSelect={(id) => {
+              setHero(id as HeroId);
+              setProfileHero(null);
+            }}
+          />
           <section className="panel">
             <h2>2. Chapter 1: Làng Ngáo</h2>
             <p>
