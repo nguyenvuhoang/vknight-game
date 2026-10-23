@@ -42,3 +42,5 @@ export const HEROES: Hero[] = [
   },
 ];
 export const getHero = (id: HeroId) => HEROES.find((h) => h.id === id)!;
+export const isHeroId = (v: unknown): v is HeroId =>
+  HEROES.some((h) => h.id === v);

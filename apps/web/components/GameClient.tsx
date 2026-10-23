@@ -1,7 +1,9 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
-import { HEROES, getHero } from "@/lib/heroes";
+import Image from "next/image";
+import Link from "next/link";
+import { HEROES, getHero, isHeroId } from "@/lib/heroes";
 import { loadChapter } from "@/lib/catalog";
 import { completed, getGuestId, saveLocal, syncProgress } from "@/lib/progress";
 import type { Chapter, HeroId, GameNotice } from "@/lib/types";
@@ -16,16 +18,41 @@ export default function GameClient() {
   const [max, setMax] = useState(0);
   const [error, setError] = useState("");
   const [profileHero, setProfileHero] = useState<HeroId | null>(null);
+  // Deep link from the chapter map: /?hero=…&stage=…&play=1
+  const pending = useRef<{ hero: HeroId; stage: number; play: boolean } | null>(
+    null,
+  );
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const h = q.get("hero");
+    if (!isHeroId(h)) return;
+    pending.current = {
+      hero: h,
+      stage: Number(q.get("stage")) || 1,
+      play: q.get("play") === "1",
+    };
+    window.history.replaceState(null, "", "/");
+    setHero(h);
+  }, []);
   useEffect(() => {
     loadChapter()
       .then(setChapter)
       .catch((e) => setError(String(e)));
   }, []);
   useEffect(() => {
-    setMax(completed(hero));
-    setStage(1);
-    setPlaying(false);
+    const done = completed(hero);
+    const p = pending.current;
+    setMax(done);
     setNotice(null);
+    if (p && p.hero === hero) {
+      pending.current = null;
+      // Same unlock rule as the stage buttons: never deep-link past max + 1.
+      setStage(Math.min(Math.max(1, p.stage), done + 1));
+      setPlaying(p.play);
+    } else {
+      setStage(1);
+      setPlaying(false);
+    }
   }, [hero]);
   const current = chapter?.levels.find((l) => l.number === stage);
   const onNotice = (event: GameNotice) => {
@@ -37,13 +64,33 @@ export default function GameClient() {
     }
   };
   return (
-    <div className="shell">
-      <h1 className="title">vKnight Phiêu Lưu Ký</h1>
-      <p className="subtitle">5 thằng ngáo · 1 hành trình · Vô số tai nạn</p>
+    <div className={`shell ${playing ? "" : "shell-menu"}`}>
+      <div className="scene" aria-hidden>
+        {/* Painted over the empty signpost in background.png. Decorative for
+            now; can become an interactive chapter map later. */}
+        <Image
+          className="signpost"
+          src="/assets/direct.png"
+          alt=""
+          width={1024}
+          height={1536}
+          sizes="300px"
+        />
+      </div>
+      <h1 className="title">
+        <Image
+          src="/assets/banghieu.png"
+          alt="vKnight Phiêu Lưu Ký — 5 thằng ngáo · 1 hành trình · Vô số tai nạn"
+          width={2172}
+          height={724}
+          sizes="(max-width: 900px) 94vw, 850px"
+          preload
+        />
+      </h1>
       {error && <p className="toast">{error}</p>}
       {!playing && (
-        <>
-          <h2>1. Chọn nhân vật</h2>
+        <div className="menu-stage">
+          <h2 className="section-label">1. Chọn nhân vật</h2>
           <div className="hero-grid">
             {HEROES.map((h) => (
               <button
@@ -71,7 +118,7 @@ export default function GameClient() {
               setProfileHero(null);
             }}
           />
-          <section className="panel">
+          <section className="panel chapter-panel">
             <h2>2. Chapter 1: Làng Ngáo</h2>
             <p>
               Vua Vịt tuyên bố mất công chúa. Năm thằng chưa kịp ăn sáng đã nhận
@@ -105,10 +152,13 @@ export default function GameClient() {
               >
                 ▶ Chơi ải {stage}: {current?.title || "..."}
               </button>
+              <Link className="map-button" href={`/chapter/1/map?hero=${hero}`}>
+                🗺 Xem bản đồ phiêu lưu
+              </Link>
               <span>⚔ {getHero(hero).ability}</span>
             </div>
           </section>
-        </>
+        </div>
       )}
       {playing && current && (
         <section className="panel">

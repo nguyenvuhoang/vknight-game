@@ -505,11 +505,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\VKnight.Api.csproj",
+      "projectUniqueName": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\VKnight.Api.csproj",
       "projectName": "VKnight.Api",
-      "projectPath": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\VKnight.Api.csproj",
+      "projectPath": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\VKnight.Api.csproj",
       "packagesPath": "C:\\Users\\nguye\\.nuget\\packages\\",
-      "outputPath": "e:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\web\\apps\\api\\obj\\",
+      "outputPath": "E:\\1.ENVIRONMENT\\O24\\vknight-starter\\apps\\api\\obj\\",
       "projectStyle": "PackageReference",
       "fallbackFolders": [
         "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"

@@ -5,8 +5,22 @@
 body {
     margin: 0;
     font-family: system-ui, Arial, sans-serif;
-    background: #f7eac2;
-    color: #29251e
+    min-height: 100dvh;
+    background: #5f8f4e;
+    color: #29251e;
+    overflow-x: hidden
+}
+
+/* Fixed scenery layer: stays put while content scrolls (works on iOS, unlike
+   background-attachment: fixed). It is a size container so children can be
+   placed in background-image pixels via the same maths as "cover". */
+.scene {
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    container-type: size;
+    background: url("/assets/background.png") center / cover no-repeat
 }
 
 button {
@@ -20,22 +34,81 @@ button:disabled {
 }
 
 .shell {
-    max-width: 1100px;
+    max-width: 1050px;
     margin: auto;
-    padding: 24px
+    padding: 12px 24px 24px
 }
 
+/* Menu screen: one viewport tall, sections sized from viewport height so the
+   whole screen fits at common desktop sizes. min-height (not height) lets very
+   short or narrow screens scroll instead of clipping content. */
+.shell-menu {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(4px, 1.2dvh, 14px);
+    min-height: 100dvh;
+    padding-top: clamp(4px, 1dvh, 12px);
+    padding-bottom: clamp(6px, 1.4dvh, 16px)
+}
+
+.shell-menu .menu-stage {
+    margin-block: auto
+}
+
+/* Logo is 3:1, so width = 3 x height; capped at ~25% of viewport height. */
 .title {
-    text-align: center;
-    font-size: clamp(32px, 5vw, 62px);
-    margin: 8px 0;
-    color: #29251e;
-    text-shadow: 3px 3px #ffce67
+    width: min(850px, 100%, calc(25dvh * 3));
+    margin: 0 auto;
+    line-height: 0;
+    transform-origin: 50% 0;
+    animation: hanging-sign-swing 5s ease-in-out infinite alternate;
+    will-change: transform
 }
 
-.subtitle {
-    text-align: center;
-    margin: 0 0 22px
+.title img {
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 6px 10px rgba(30, 20, 5, .35))
+}
+
+/* Pendulum from the rope anchors; transform-only so layout never shifts. */
+@keyframes hanging-sign-swing {
+    from { transform: rotate(-1.5deg) }
+    to { transform: rotate(1.5deg) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .title {
+        animation: none
+    }
+}
+
+/* direct.png laid over the empty signpost painted in background.png
+   (1672x941). --s = px per background pixel under "cover"; --ox/--oy = the
+   cropped offset. Box below is in background pixels, so it tracks the painted
+   post at any aspect ratio (and slides off-screen with it on portrait). */
+.signpost {
+    --s: max(100cqw / 1672, 100cqh / 941);
+    --ox: calc((100cqw - 1672 * var(--s)) / 2);
+    --oy: calc((100cqh - 941 * var(--s)) / 2);
+    position: absolute;
+    left: calc(var(--ox) - 8 * var(--s));
+    top: calc(var(--oy) + 306 * var(--s));
+    width: calc(300 * var(--s));
+    height: auto;
+    user-select: none;
+    filter: drop-shadow(0 6px 8px rgba(20, 12, 0, .45))
+}
+
+.section-label {
+    display: inline-block;
+    margin: 0 0 clamp(6px, 1.2dvh, 12px);
+    padding: clamp(2px, .6dvh, 6px) 16px;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 12px;
+    box-shadow: 4px 4px #30291d;
+    font-size: clamp(16px, 2.4dvh, 20px)
 }
 
 .hero-grid {
@@ -46,10 +119,10 @@ button:disabled {
 
 .hero-card {
     border: 3px solid #30291d;
-    background: white;
+    background: #fff4d6;
     border-radius: 16px;
-    padding: 10px;
-    min-height: 205px;
+    box-shadow: 3px 4px #30291d;
+    padding: clamp(5px, 1dvh, 10px) 8px;
     transition: transform .15s, box-shadow .15s
 }
 
@@ -62,7 +135,7 @@ button:disabled {
 .hero-card img {
     object-fit: contain;
     width: 100%;
-    height: 116px
+    height: clamp(60px, 10dvh, 116px)
 }
 
 .hero-card strong {
@@ -75,12 +148,51 @@ button:disabled {
 }
 
 .panel {
-    background: #fff9e8;
+    background: #fff4d6;
     border: 3px solid #30291d;
     box-shadow: 7px 7px #30291d;
     border-radius: 18px;
     padding: 18px;
     margin-top: 22px
+}
+
+/* Quest-board parchment (2172x724). Nine-slice via border-image so the ornate
+   corners never distort; only plank edges and parchment centre stretch.
+   Slice offsets are in source pixels; padding keeps content inside the parchment. */
+.chapter-panel {
+    background: none;
+    border: 0 solid transparent;
+    border-radius: 0;
+    box-shadow: none;
+    border-image-source: url("/assets/chapterbacground.png");
+    border-image-slice: 230 140 228 140 fill;
+    /* frame thickness scales with viewport height; padding keeps text inside */
+    --bw: clamp(56px, 9.5dvh, 100px);
+    border-image-width: var(--bw) calc(var(--bw) * .64);
+    border-image-repeat: stretch;
+    margin-top: clamp(8px, 2dvh, 22px);
+    padding: calc(var(--bw) * .48) calc(var(--bw) * .6) calc(var(--bw) * .46);
+    filter: drop-shadow(0 8px 12px rgba(20, 12, 0, .4))
+}
+
+.chapter-panel h2 {
+    margin: 0 0 8px
+}
+
+.chapter-panel p {
+    margin: 0 0 clamp(4px, 1dvh, 10px)
+}
+
+.chapter-panel .stage-buttons button {
+    height: clamp(32px, 4.4dvh, 42px)
+}
+
+.chapter-panel .actions {
+    margin-top: clamp(8px, 1.6dvh, 14px)
+}
+
+.chapter-panel .primary {
+    padding-block: clamp(8px, 1.4dvh, 12px)
 }
 
 .primary {
@@ -90,6 +202,32 @@ button:disabled {
     padding: 12px 22px;
     font-weight: 800;
     box-shadow: 3px 4px #2b2926
+}
+
+.map-button {
+    display: inline-block;
+    border: 3px solid #2b2926;
+    border-radius: 12px;
+    background: #7a4a1f;
+    color: #fff4d6;
+    padding: 12px 18px;
+    padding-block: clamp(8px, 1.4dvh, 12px);
+    font-weight: 800;
+    text-decoration: none;
+    box-shadow: 3px 4px #2b2926;
+    transition: transform .12s
+}
+
+.map-button:hover,
+.map-button:focus-visible {
+    transform: translateY(-2px);
+    background: #8d5726
+}
+
+a.secondary {
+    display: inline-block;
+    color: inherit;
+    text-decoration: none
 }
 
 .secondary {
@@ -191,10 +329,18 @@ button:disabled {
 }
 
 .footer {
+    width: fit-content;
     font-size: 12px;
-    color: #6c6353;
-    text-align: center;
-    margin: 30px 0
+    font-weight: 600;
+    color: #fff4d6;
+    background: rgba(41, 37, 30, .6);
+    border-radius: 999px;
+    padding: 4px 12px;
+    margin: 30px auto 0
+}
+
+.shell-menu .footer {
+    margin: 0 auto
 }
 
 @media(max-width:700px) {
@@ -203,7 +349,12 @@ button:disabled {
     }
 
     .hero-grid {
-        grid-template-columns: repeat(3, 1fr)
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 10px
+    }
+
+    .section-label {
+        font-size: 17px
     }
 
     .hero-card {
@@ -216,6 +367,16 @@ button:disabled {
 
     .panel {
         padding: 12px
+    }
+
+    .chapter-panel {
+        --bw: 60px;
+        border-image-width: 60px 38px;
+        padding: 40px 32px 46px
+    }
+
+    .chapter-panel h2 {
+        font-size: 20px
     }
 
     .game-wrap {
@@ -607,5 +768,315 @@ button:disabled {
 
     .cp-footer .primary {
         flex: 2
+    }
+}
+
+/* ---------- Chapter map (/chapter/1/map) ---------- */
+.map-screen {
+    position: fixed;
+    inset: 0;
+    background: #2f5a2a
+}
+
+/* Scroll/pan viewport. Size container so the stage can "cover" it at zoom 1. */
+.map-scroller {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    container-type: size;
+    cursor: grab;
+    scrollbar-width: thin
+}
+
+.map-scroller.dragging {
+    cursor: grabbing;
+    user-select: none
+}
+
+/* Image keeps its aspect ratio; hotspots are % of this box so they track it. */
+.map-stage {
+    position: relative;
+    width: calc(max(100cqw, 100cqh * 1222 / 1287) * var(--zoom, 1));
+    aspect-ratio: 1222 / 1287
+}
+
+.map-stage img {
+    display: block;
+    width: 100%;
+    height: auto;
+    user-select: none;
+    -webkit-user-drag: none
+}
+
+/* Transparent hit areas over the painted markers - no duplicate artwork. */
+.map-spot {
+    position: absolute;
+    padding: 0;
+    border: 0;
+    border-radius: 22px;
+    background: transparent;
+    cursor: pointer;
+    transition: box-shadow .15s, background-color .15s;
+    -webkit-tap-highlight-color: transparent
+}
+
+.map-spot:focus-visible,
+.map-spot:hover {
+    background: rgba(255, 236, 160, .14);
+    box-shadow: 0 0 0 3px rgba(255, 214, 102, .95), 0 0 22px 4px rgba(255, 196, 64, .65)
+}
+
+.map-spot:focus-visible {
+    outline: 3px solid #30291d;
+    outline-offset: 3px
+}
+
+.map-spot.is-locked {
+    cursor: not-allowed;
+    -webkit-backdrop-filter: grayscale(.85) brightness(.8);
+    backdrop-filter: grayscale(.85) brightness(.8)
+}
+
+.map-spot.is-locked:hover {
+    box-shadow: 0 0 0 3px rgba(60, 50, 40, .8)
+}
+
+.map-spot.is-open {
+    animation: map-spot-pulse 1.8s ease-in-out infinite
+}
+
+@keyframes map-spot-pulse {
+    50% { box-shadow: 0 0 0 3px rgba(255, 214, 102, .9), 0 0 26px 6px rgba(255, 196, 64, .7) }
+}
+
+.map-spot.is-done::after {
+    content: "✔";
+    position: absolute;
+    top: 2%;
+    right: 4%;
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #30291d;
+    border-radius: 50%;
+    background: #6fbf4a;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 900
+}
+
+.map-tip {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    z-index: 2;
+    display: none;
+    width: max-content;
+    max-width: 240px;
+    padding: 8px 12px;
+    transform: translateX(-50%);
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 12px;
+    box-shadow: 3px 4px #30291d;
+    color: #29251e;
+    text-align: left;
+    font-size: 14px;
+    line-height: 1.35;
+    pointer-events: none
+}
+
+.map-spot.tip-below .map-tip {
+    top: calc(100% + 8px);
+    bottom: auto
+}
+
+.map-tip strong,
+.map-tip em,
+.map-tip span {
+    display: block
+}
+
+.map-tip em {
+    color: #674c1b;
+    font-size: 13px
+}
+
+.map-spot:focus-visible .map-tip {
+    display: block
+}
+
+@media (hover: hover) {
+    .map-spot:hover .map-tip {
+        display: block
+    }
+}
+
+/* Floating wooden HUD */
+.map-hud {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: min(760px, calc(100% - 20px));
+    padding: 8px 12px;
+    transform: translateX(-50%);
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 16px;
+    box-shadow: 4px 5px #30291d
+}
+
+.map-progress {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    gap: 2px;
+    font-size: 14px
+}
+
+.map-progress strong {
+    font-size: 17px
+}
+
+.map-progress-bar {
+    height: 10px;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    background: #fff;
+    overflow: hidden
+}
+
+.map-progress-bar span {
+    display: block;
+    height: 100%;
+    background: repeating-linear-gradient(-45deg, #ffce67 0 8px, #fdbd46 8px 16px)
+}
+
+.map-hud .primary {
+    white-space: nowrap
+}
+
+.map-controls {
+    position: absolute;
+    right: 14px;
+    bottom: 14px;
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    gap: 8px
+}
+
+.map-controls .secondary {
+    min-width: 46px;
+    min-height: 42px;
+    background: #fff4d6;
+    box-shadow: 2px 3px #30291d
+}
+
+.map-toast {
+    position: absolute;
+    left: 50%;
+    bottom: 22px;
+    z-index: 6;
+    margin: 0;
+    max-width: calc(100% - 100px);
+    padding: 10px 16px;
+    transform: translateX(-50%);
+    background: #3b2a17;
+    color: #fff4d6;
+    border: 3px solid #c89a3c;
+    border-radius: 12px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, .35);
+    font-weight: 700;
+    animation: cp-pop .25s ease-out
+}
+
+.map-sheet-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 10;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding: 12px;
+    background: rgba(41, 37, 30, .35);
+    animation: cp-fade .15s ease-out
+}
+
+.map-sheet {
+    position: relative;
+    width: min(440px, 100%);
+    padding: 18px 18px 20px;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 18px;
+    box-shadow: 5px 6px #30291d;
+    animation: cp-pop .25s ease-out
+}
+
+.map-sheet h2 {
+    margin: 0 48px 4px 0;
+    font-size: 21px
+}
+
+.map-sheet p {
+    margin: 4px 0 12px
+}
+
+.map-sheet-sub {
+    color: #674c1b;
+    font-style: italic
+}
+
+.map-sheet-status {
+    font-weight: 800
+}
+
+.map-sheet-status.is-locked {
+    color: #8a3b2c
+}
+
+.map-sheet .primary {
+    width: 100%
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .map-spot.is-open,
+    .map-toast,
+    .map-sheet {
+        animation: none
+    }
+}
+
+@media (max-width: 700px) {
+    .map-hud {
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 8px
+    }
+
+    .map-progress {
+        order: 3;
+        flex-basis: 100%;
+        font-size: 13px
+    }
+
+    .map-progress strong {
+        font-size: 15px
+    }
+
+    .map-hud .primary {
+        flex: 1;
+        padding: 8px 10px
+    }
+
+    .map-home {
+        padding: 8px 10px
     }
 }
