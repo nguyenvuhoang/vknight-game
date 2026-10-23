@@ -9,6 +9,7 @@ import { completed } from "@/lib/progress";
 import { goToScene, useSceneEnter } from "@/lib/transition";
 import type { Chapter, HeroId } from "@/lib/types";
 import CharacterProfileModal from "./character-profile/CharacterProfileModal";
+import { useCharacters } from "@/lib/api/characters";
 // Home screen: hero + stage selection. Stages play on their own full-screen
 // route (/chapter/1/stage/[level]), entered with a scene transition.
 export default function GameClient() {
@@ -21,6 +22,16 @@ export default function GameClient() {
   const [max, setMax] = useState(0);
   const [error, setError] = useState("");
   const [profileHero, setProfileHero] = useState<HeroId | null>(null);
+  // Profiles come from the BFF (/api/game/characters); HEROES stays the
+  // gameplay registry, so cards and play still work if the API is down.
+  const characters = useCharacters();
+  const cardHeroes =
+    characters.status === "ready"
+      ? [
+          ...characters.order.flatMap((id) => HEROES.filter((h) => h.id === id)),
+          ...HEROES.filter((h) => !characters.profiles.has(h.id)),
+        ]
+      : HEROES;
   // ?hero=… keeps the selected hero when returning; old ?stage=…&play=1
   // links are forwarded to the stage route.
   const pending = useRef<{ hero: HeroId; stage: number; play: boolean } | null>(
@@ -89,8 +100,16 @@ export default function GameClient() {
         {error && <p className="toast">{error}</p>}
         <div className="menu-stage">
           <h2 className="section-label">1. Chọn nhân vật</h2>
+          {characters.status === "error" && (
+            <p className="chars-notice" role="alert">
+              😵 Chưa tải được hồ sơ nhân vật.{" "}
+              <button type="button" onClick={characters.retry}>
+                ↻ Thử lại
+              </button>
+            </p>
+          )}
           <div className="hero-grid">
-            {HEROES.map((h) => (
+            {cardHeroes.map((h) => (
               <button
                 key={h.id}
                 type="button"
@@ -100,7 +119,7 @@ export default function GameClient() {
                 onClick={() => setProfileHero(h.id)}
               >
                 <img src={h.asset} alt={h.name} />
-                <strong>{h.name}</strong>
+                <strong>{characters.profiles?.get(h.id)?.name ?? h.name}</strong>
                 <small>{h.tagline}</small>
                 <span className="hero-card-hint">🔍 Xem hồ sơ</span>
               </button>
@@ -111,6 +130,16 @@ export default function GameClient() {
             selectedHeroId={hero}
             isOpen={profileHero !== null}
             onClose={() => setProfileHero(null)}
+            profile={profileHero ? (characters.profiles?.get(profileHero) ?? null) : null}
+            loadState={
+              characters.status === "ready" && profileHero && !characters.profiles.has(profileHero)
+                ? "error"
+                : characters.status
+            }
+            loadError={
+              characters.status === "ready" ? "Máy chủ chưa có hồ sơ cho nhân vật này." : characters.error
+            }
+            onRetry={characters.retry}
             onSelect={(id) => {
               setHero(id as HeroId);
               setProfileHero(null);

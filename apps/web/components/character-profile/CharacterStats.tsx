@@ -1,7 +1,13 @@
-import {
-  STAT_LABELS,
-  type CharacterProfile,
-} from "@/lib/character-profiles";
+import type { CharacterStatKey, CharacterStats as Stats } from "@/lib/api/character-types";
+
+/** Display order + Vietnamese labels for the stat bars. */
+const STAT_LABELS: { key: CharacterStatKey; label: string }[] = [
+  { key: "strength", label: "Sức mạnh" },
+  { key: "intelligence", label: "Trí thông minh" },
+  { key: "speed", label: "Tốc độ" },
+  { key: "luck", label: "May mắn" },
+  { key: "humor", label: "Độ tấu hài" },
+];
 
 function quip(value: number) {
   if (value >= 100) return "Max luôn!";
@@ -11,11 +17,7 @@ function quip(value: number) {
   return null;
 }
 
-export default function CharacterStats({
-  stats,
-}: {
-  stats: CharacterProfile["stats"];
-}) {
+export default function CharacterStats({ stats }: { stats: Stats }) {
   return (
     <ul className="cp-stats">
       {STAT_LABELS.map(({ key, label }) => {

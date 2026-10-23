@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react";
 import type { CSSProperties } from "react";
 import { HEROES } from "@/lib/heroes";
-import { getCharacterProfile } from "@/lib/character-profiles";
+import type { CharacterProfile } from "@/lib/api/character-types";
 import CharacterPortrait from "./CharacterPortrait";
 import CharacterStats from "./CharacterStats";
 import CharacterAbility from "./CharacterAbility";
@@ -13,7 +13,21 @@ export interface CharacterProfileModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (heroId: string) => void;
+  /** Backend profile for heroId (null while loading or on error). */
+  profile: CharacterProfile | null;
+  loadState: "loading" | "ready" | "error";
+  loadError?: string | null;
+  onRetry: () => void;
 }
+
+// Vietnamese labels for backend character_class values (raw value otherwise).
+const CLASS_LABELS: Record<string, string> = {
+  Swordsman: "Kiếm sĩ",
+  Professor: "Học giả",
+  Negotiator: "Nhà đàm phán",
+  Berserker: "Cuồng chiến binh",
+  Trickster: "Kẻ bịp bợm",
+};
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -24,6 +38,10 @@ export default function CharacterProfileModal({
   isOpen,
   onClose,
   onSelect,
+  profile,
+  loadState,
+  loadError,
+  onRetry,
 }: CharacterProfileModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -33,8 +51,8 @@ export default function CharacterProfileModal({
   }, [onClose]);
 
   const hero = HEROES.find((h) => h.id === heroId);
-  const profile = getCharacterProfile(heroId);
-  const visible = isOpen && !!hero && !!profile;
+  // Opens even without a profile: selection only needs the gameplay hero.
+  const visible = isOpen && !!hero;
 
   // Scroll lock, Escape, focus trap and focus restoration.
   useEffect(() => {
@@ -74,9 +92,12 @@ export default function CharacterProfileModal({
     };
   }, [visible]);
 
-  if (!visible || !hero || !profile) return null;
+  if (!visible || !hero) return null;
 
   const isSelected = hero.id === selectedHeroId;
+  const otherAbilities = profile
+    ? profile.abilities.filter((a) => a.code !== profile.specialAbility.code)
+    : [];
   const accent = { "--cp-accent": hero.tint } as CSSProperties;
 
   return (
@@ -108,61 +129,93 @@ export default function CharacterProfileModal({
           <CharacterPortrait hero={hero} profile={profile} isSelected={isSelected} />
 
           <div className="cp-info">
-            <dl className="cp-facts">
-              <div>
-                <dt>Tên</dt>
-                <dd>{profile.name}</dd>
+            {profile ? (
+              <>
+                <dl className="cp-facts">
+                  <div>
+                    <dt>Tên</dt>
+                    <dd>{profile.name}</dd>
+                  </div>
+                  <div>
+                    <dt>Biệt danh</dt>
+                    <dd>{profile.nickname}</dd>
+                  </div>
+                  <div>
+                    <dt>Lớp nhân vật</dt>
+                    <dd>{CLASS_LABELS[profile.characterClass] ?? (profile.characterClass || "—")}</dd>
+                  </div>
+                </dl>
+
+                <section className="cp-section">
+                  <h3>Tính cách</h3>
+                  <p>{profile.personality}</p>
+                </section>
+
+                <section className="cp-section">
+                  <h3>Tiểu sử</h3>
+                  <p>{profile.backstory}</p>
+                </section>
+
+                <section className="cp-section">
+                  <h3>Kỹ năng đặc biệt</h3>
+                  <CharacterAbility ability={profile.specialAbility} />
+                </section>
+
+                {otherAbilities.length > 0 && (
+                  <section className="cp-section">
+                    <h3>Kỹ năng khác</h3>
+                    {otherAbilities.map((a) => (
+                      <CharacterAbility key={a.code} ability={a} />
+                    ))}
+                  </section>
+                )}
+
+                {profile.unlock.unlockable && (
+                  <p className="cp-unlock">
+                    🔒 Mở khóa: cấp {profile.unlock.level}
+                    {profile.unlock.coins > 0 && ` · ${profile.unlock.coins} xu`}
+                  </p>
+                )}
+
+                <div className="cp-columns">
+                  <section className="cp-section">
+                    <h3>Điểm mạnh</h3>
+                    <ul className="cp-list cp-good">
+                      {profile.strengths.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </section>
+                  <section className="cp-section">
+                    <h3>Điểm yếu</h3>
+                    <ul className="cp-list cp-bad">
+                      {profile.weaknesses.map((s) => (
+                        <li key={s}>{s}</li>
+                      ))}
+                    </ul>
+                  </section>
+                </div>
+
+                {profile.funnyQuote && <blockquote className="cp-quote">“{profile.funnyQuote}”</blockquote>}
+
+                <section className="cp-section">
+                  <h3>Chỉ số</h3>
+                  <CharacterStats stats={profile.stats} />
+                </section>
+              </>
+            ) : loadState === "error" ? (
+              <div className="cp-state" role="alert">
+                <p>😵 {loadError || "Không tải được hồ sơ nhân vật."}</p>
+                <p className="cp-state-note">Bạn vẫn có thể chọn nhân vật này để chơi.</p>
+                <button type="button" className="secondary" onClick={onRetry}>
+                  ↻ Thử lại
+                </button>
               </div>
-              <div>
-                <dt>Biệt danh</dt>
-                <dd>{profile.nickname}</dd>
-              </div>
-              <div>
-                <dt>Lớp nhân vật</dt>
-                <dd>{profile.title}</dd>
-              </div>
-            </dl>
-
-            <section className="cp-section">
-              <h3>Tính cách</h3>
-              <p>{profile.personality}</p>
-            </section>
-
-            <section className="cp-section">
-              <h3>Tiểu sử</h3>
-              <p>{profile.backstory}</p>
-            </section>
-
-            <section className="cp-section">
-              <h3>Kỹ năng đặc biệt</h3>
-              <CharacterAbility ability={profile.specialAbility} />
-            </section>
-
-            <div className="cp-columns">
-              <section className="cp-section">
-                <h3>Điểm mạnh</h3>
-                <ul className="cp-list cp-good">
-                  {profile.strengths.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ul>
-              </section>
-              <section className="cp-section">
-                <h3>Điểm yếu</h3>
-                <ul className="cp-list cp-bad">
-                  {profile.weaknesses.map((s) => (
-                    <li key={s}>{s}</li>
-                  ))}
-                </ul>
-              </section>
-            </div>
-
-            <blockquote className="cp-quote">“{profile.funnyQuote}”</blockquote>
-
-            <section className="cp-section">
-              <h3>Chỉ số</h3>
-              <CharacterStats stats={profile.stats} />
-            </section>
+            ) : (
+              <p className="cp-state" role="status">
+                <span className="scene-spinner" aria-hidden /> Đang mở hồ sơ nhân vật…
+              </p>
+            )}
           </div>
         </div>
 
