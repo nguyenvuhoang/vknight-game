@@ -771,150 +771,113 @@ a.secondary {
     }
 }
 
-/* ---------- Chapter map (/chapter/1/map) ---------- */
+/* ---------- Chapter map viewer (/chapter/1/map) ---------- */
+/* --scene-top / --scene-bottom are measured from the HUD and dock in JS so the
+   artwork always sits fully between them. */
 .map-screen {
+    --scene-top: 78px;
+    --scene-bottom: 176px;
     position: fixed;
     inset: 0;
-    background: #2f5a2a
+    overflow: hidden;
+    background: linear-gradient(#3d6b34, #22401f)
 }
 
-/* Scroll/pan viewport. Size container so the stage can "cover" it at zoom 1. */
-.map-scroller {
+.scene-stage {
+    touch-action: pan-y
+}
+
+/* Full-screen positioned box: parent for the fill images (backdrop + frame). */
+.scene-view {
     position: absolute;
-    inset: 0;
-    overflow: auto;
-    overscroll-behavior: contain;
-    container-type: size;
-    cursor: grab;
-    scrollbar-width: thin
+    inset: 0
 }
 
-.map-scroller.dragging {
-    cursor: grabbing;
-    user-select: none
+/* Blurred copy of the current map fills the whole screen behind the art. */
+.scene-backdrop {
+    object-fit: cover;
+    filter: blur(22px) brightness(.62) saturate(1.15);
+    transform: scale(1.12);
+    opacity: 0;
+    transition: opacity .45s ease
 }
 
-/* Image keeps its aspect ratio; hotspots are % of this box so they track it. */
-.map-stage {
-    position: relative;
-    width: calc(max(100cqw, 100cqh * 1222 / 1287) * var(--zoom, 1));
-    aspect-ratio: 1222 / 1287
-}
-
-.map-stage img {
-    display: block;
-    width: 100%;
-    height: auto;
-    user-select: none;
-    -webkit-user-drag: none
-}
-
-/* Transparent hit areas over the painted markers - no duplicate artwork. */
-.map-spot {
+.scene-frame {
     position: absolute;
-    padding: 0;
-    border: 0;
-    border-radius: 22px;
-    background: transparent;
-    cursor: pointer;
-    transition: box-shadow .15s, background-color .15s;
-    -webkit-tap-highlight-color: transparent
+    top: var(--scene-top);
+    bottom: var(--scene-bottom);
+    left: 12px;
+    right: 12px
 }
 
-.map-spot:focus-visible,
-.map-spot:hover {
-    background: rgba(255, 236, 160, .14);
-    box-shadow: 0 0 0 3px rgba(255, 214, 102, .95), 0 0 22px 4px rgba(255, 196, 64, .65)
+/* Whole artwork visible, never stretched or cropped. */
+.scene-art {
+    object-fit: contain;
+    filter: drop-shadow(0 10px 24px rgba(0, 0, 0, .45));
+    opacity: 0;
+    transform: scale(.985);
+    transition: opacity .4s ease, transform .5s ease
 }
 
-.map-spot:focus-visible {
-    outline: 3px solid #30291d;
-    outline-offset: 3px
+.scene-view.is-ready .scene-backdrop {
+    opacity: 1
 }
 
-.map-spot.is-locked {
-    cursor: not-allowed;
-    -webkit-backdrop-filter: grayscale(.85) brightness(.8);
-    backdrop-filter: grayscale(.85) brightness(.8)
+.scene-view.is-ready .scene-art {
+    opacity: 1;
+    transform: none
 }
 
-.map-spot.is-locked:hover {
-    box-shadow: 0 0 0 3px rgba(60, 50, 40, .8)
-}
-
-.map-spot.is-open {
-    animation: map-spot-pulse 1.8s ease-in-out infinite
-}
-
-@keyframes map-spot-pulse {
-    50% { box-shadow: 0 0 0 3px rgba(255, 214, 102, .9), 0 0 26px 6px rgba(255, 196, 64, .7) }
-}
-
-.map-spot.is-done::after {
-    content: "✔";
+.scene-status {
     position: absolute;
-    top: 2%;
-    right: 4%;
-    display: grid;
-    place-items: center;
-    width: 22px;
-    height: 22px;
-    border: 2px solid #30291d;
-    border-radius: 50%;
-    background: #6fbf4a;
-    color: #fff;
-    font-size: 12px;
-    font-weight: 900
-}
-
-.map-tip {
-    position: absolute;
+    top: 50%;
     left: 50%;
-    bottom: calc(100% + 8px);
-    z-index: 2;
-    display: none;
-    width: max-content;
-    max-width: 240px;
-    padding: 8px 12px;
-    transform: translateX(-50%);
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    padding: 10px 16px;
+    transform: translate(-50%, -50%);
     background: #fff4d6;
     border: 3px solid #30291d;
-    border-radius: 12px;
-    box-shadow: 3px 4px #30291d;
-    color: #29251e;
-    text-align: left;
-    font-size: 14px;
-    line-height: 1.35;
-    pointer-events: none
+    border-radius: 14px;
+    box-shadow: 4px 5px #30291d;
+    font-weight: 700;
+    white-space: nowrap
 }
 
-.map-spot.tip-below .map-tip {
-    top: calc(100% + 8px);
-    bottom: auto
+.scene-spinner {
+    width: 18px;
+    height: 18px;
+    border: 3px solid #e8cf8e;
+    border-top-color: #7a4a1f;
+    border-radius: 50%;
+    animation: scene-spin .8s linear infinite
 }
 
-.map-tip strong,
-.map-tip em,
-.map-tip span {
-    display: block
+@keyframes scene-spin {
+    to { transform: rotate(360deg) }
 }
 
-.map-tip em {
-    color: #674c1b;
-    font-size: 13px
+.scene-error {
+    flex-direction: column;
+    gap: 6px;
+    width: min(360px, calc(100% - 24px));
+    padding: 18px;
+    text-align: center;
+    white-space: normal
 }
 
-.map-spot:focus-visible .map-tip {
-    display: block
+.scene-error > span:first-child {
+    font-size: 34px
 }
 
-@media (hover: hover) {
-    .map-spot:hover .map-tip {
-        display: block
-    }
+.scene-error span {
+    font-weight: 500
 }
 
-/* Floating wooden HUD */
+/* Compact floating wooden HUD */
 .map-hud {
     position: absolute;
     top: 10px;
@@ -922,30 +885,64 @@ a.secondary {
     z-index: 5;
     display: flex;
     align-items: center;
-    gap: 12px;
-    width: min(760px, calc(100% - 20px));
-    padding: 8px 12px;
+    gap: 10px;
+    width: min(980px, calc(100% - 20px));
+    padding: 6px 8px;
     transform: translateX(-50%);
     background: #fff4d6;
     border: 3px solid #30291d;
     border-radius: 16px;
-    box-shadow: 4px 5px #30291d
+    box-shadow: 0 3px 0 #c89a3c, 4px 6px 0 #30291d
+}
+
+.map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 40px;
+    padding: 6px 12px;
+    border: 2px solid #30291d;
+    border-radius: 10px;
+    background: #fff;
+    color: inherit;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+    box-shadow: 2px 3px #30291d;
+    transition: transform .12s, background-color .12s
+}
+
+.map-btn:hover,
+.map-btn:focus-visible {
+    background: #ffe9b0;
+    transform: translateY(-1px)
 }
 
 .map-progress {
     flex: 1;
     min-width: 0;
     display: grid;
-    gap: 2px;
-    font-size: 14px
+    gap: 1px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.25
 }
 
 .map-progress strong {
-    font-size: 17px
+    font-size: 16px
+}
+
+.map-progress > span:not(.map-progress-bar) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
 }
 
 .map-progress-bar {
-    height: 10px;
+    justify-self: center;
+    width: min(220px, 100%);
+    height: 8px;
+    margin-top: 2px;
     border: 2px solid #30291d;
     border-radius: 999px;
     background: #fff;
@@ -958,36 +955,192 @@ a.secondary {
     background: repeating-linear-gradient(-45deg, #ffce67 0 8px, #fdbd46 8px 16px)
 }
 
-.map-hud .primary {
+.map-continue {
+    padding: 8px 14px;
     white-space: nowrap
 }
 
-.map-controls {
+/* Bottom dock: level info, CTA and level selector */
+.map-dock {
     position: absolute;
-    right: 14px;
-    bottom: 14px;
+    left: 50%;
+    bottom: 12px;
     z-index: 5;
-    display: flex;
-    flex-direction: column;
-    gap: 8px
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    width: min(980px, calc(100% - 20px));
+    transform: translateX(-50%)
 }
 
-.map-controls .secondary {
-    min-width: 46px;
-    min-height: 42px;
+.dock-main {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "info play" "chips chips";
+    align-items: center;
+    gap: 8px 14px;
+    padding: 10px 14px;
     background: #fff4d6;
-    box-shadow: 2px 3px #30291d
+    border: 3px solid #30291d;
+    border-radius: 16px;
+    box-shadow: 0 3px 0 #c89a3c, 4px 6px 0 #30291d
+}
+
+.dock-info {
+    grid-area: info;
+    min-width: 0
+}
+
+.dock-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0
+}
+
+.dock-count {
+    padding: 1px 10px;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    background: #7a4a1f;
+    color: #fff4d6;
+    font-size: 13px;
+    font-weight: 800
+}
+
+.dock-title {
+    margin: 2px 0 0;
+    font-size: 22px;
+    line-height: 1.2
+}
+
+.dock-desc {
+    margin: 2px 0 0;
+    color: #674c1b;
+    font-size: 14px
+}
+
+.dock-play {
+    grid-area: play;
+    max-width: 320px
+}
+
+.dock-play[aria-disabled="true"] {
+    background: #d9cdb0;
+    color: #6c6353;
+    cursor: not-allowed;
+    box-shadow: 2px 3px #6c6353
+}
+
+.status-pill {
+    display: inline-block;
+    padding: 1px 9px;
+    border: 2px solid currentColor;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap
+}
+
+.status-pill.is-COMPLETED {
+    color: #2f6b2b;
+    background: #e3f3d6
+}
+
+.status-pill.is-AVAILABLE {
+    color: #8a4b05;
+    background: #ffe3a3
+}
+
+.status-pill.is-LOCKED {
+    color: #6c6353;
+    background: #ece4d2
+}
+
+.map-arrow {
+    width: 52px;
+    height: 52px;
+    border: 3px solid #30291d;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #b0763c, #7a4a1f);
+    color: #fff4d6;
+    font-size: 20px;
+    box-shadow: 3px 4px #30291d;
+    transition: transform .12s
+}
+
+.map-arrow:hover:not(:disabled),
+.map-arrow:focus-visible {
+    transform: scale(1.08)
+}
+
+.level-chips {
+    grid-area: chips;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 4px 2px;
+    overflow-x: auto;
+    scrollbar-width: none
+}
+
+.level-chip {
+    position: relative;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    border: 2px solid #30291d;
+    border-radius: 50%;
+    background: #fff;
+    font-weight: 800;
+    transition: transform .12s, box-shadow .12s
+}
+
+.level-chip:hover {
+    transform: translateY(-2px)
+}
+
+.level-chip.is-COMPLETED {
+    background: #ffce67
+}
+
+.level-chip.is-AVAILABLE {
+    background: #fdbd46;
+    box-shadow: 0 0 0 3px rgba(253, 189, 70, .45)
+}
+
+.level-chip.is-LOCKED {
+    background: #e6dcc6;
+    color: #8b8170
+}
+
+.level-chip.is-LOCKED::after {
+    content: "🔒";
+    position: absolute;
+    right: -5px;
+    bottom: -5px;
+    font-size: 11px
+}
+
+.level-chip[aria-current="true"] {
+    color: #fff4d6;
+    background: #7a4a1f;
+    box-shadow: 0 0 0 3px #ffce67;
+    transform: scale(1.12)
 }
 
 .map-toast {
     position: absolute;
-    left: 50%;
-    bottom: 22px;
+    left: 12px;
+    right: 12px;
+    bottom: calc(var(--scene-bottom) + 8px);
     z-index: 6;
-    margin: 0;
-    max-width: calc(100% - 100px);
+    width: fit-content;
+    margin: 0 auto;
     padding: 10px 16px;
-    transform: translateX(-50%);
     background: #3b2a17;
     color: #fff4d6;
     border: 3px solid #c89a3c;
@@ -997,86 +1150,1261 @@ a.secondary {
     animation: cp-pop .25s ease-out
 }
 
-.map-sheet-backdrop {
-    position: absolute;
+/* 📜 Story & level guide */
+.guide-backdrop {
+    position: fixed;
     inset: 0;
-    z-index: 10;
+    z-index: 100;
     display: flex;
-    align-items: flex-end;
+    align-items: center;
     justify-content: center;
-    padding: 12px;
-    background: rgba(41, 37, 30, .35);
-    animation: cp-fade .15s ease-out
+    padding: 16px;
+    background: rgba(41, 37, 30, .5);
+    animation: cp-fade .18s ease-out
 }
 
-.map-sheet {
+.guide-modal {
     position: relative;
-    width: min(440px, 100%);
-    padding: 18px 18px 20px;
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    width: min(1000px, 100%);
+    max-height: calc(100dvh - 32px);
     background: #fff4d6;
     border: 3px solid #30291d;
-    border-radius: 18px;
-    box-shadow: 5px 6px #30291d;
-    animation: cp-pop .25s ease-out
+    border-radius: 20px;
+    box-shadow: 8px 8px #30291d;
+    overflow: hidden;
+    animation: cp-pop .28s cubic-bezier(.2, 1.4, .4, 1)
 }
 
-.map-sheet h2 {
-    margin: 0 48px 4px 0;
-    font-size: 21px
+.guide-intro {
+    overflow-y: auto;
+    padding: 26px 24px;
+    background: #ffdf7c;
+    background-image: radial-gradient(rgba(255, 255, 255, .35) 2px, transparent 2px);
+    background-size: 16px 16px;
+    border-right: 3px solid #30291d
 }
 
-.map-sheet p {
-    margin: 4px 0 12px
-}
-
-.map-sheet-sub {
-    color: #674c1b;
-    font-style: italic
-}
-
-.map-sheet-status {
+.guide-kicker {
+    display: inline-block;
+    margin: 0 0 6px;
+    padding: 2px 10px;
+    background: #7a4a1f;
+    color: #fff4d6;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    font-size: 13px;
     font-weight: 800
 }
 
-.map-sheet-status.is-locked {
-    color: #8a3b2c
+.guide-intro h2 {
+    margin: 4px 0 12px;
+    font-size: 28px;
+    line-height: 1.15;
+    text-shadow: 2px 2px #fff4d6
 }
 
-.map-sheet .primary {
-    width: 100%
+.guide-intro p {
+    line-height: 1.55
+}
+
+.guide-hero {
+    display: grid;
+    gap: 2px;
+    margin-top: 18px;
+    padding: 10px 12px;
+    background: #fff4d6;
+    border: 2px solid #30291d;
+    border-radius: 12px
+}
+
+.guide-levels {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden
+}
+
+.guide-levels h3 {
+    margin: 0;
+    padding: 18px 64px 10px 20px;
+    font-size: 17px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    border-bottom: 3px solid #30291d
+}
+
+.guide-levels ol {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 14px 16px 18px;
+    list-style: none;
+    overflow-y: auto;
+    overscroll-behavior: contain
+}
+
+.guide-card {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 12px;
+    padding: 10px;
+    background: #fff;
+    border: 2px solid #30291d;
+    border-radius: 14px;
+    box-shadow: 3px 3px #30291d
+}
+
+.guide-card.is-current {
+    background: #fff8e0;
+    border-color: #c89a3c;
+    box-shadow: 0 0 0 3px #ffce67, 3px 3px #30291d
+}
+
+.guide-thumb {
+    position: relative;
+    align-self: start;
+    width: 96px;
+    aspect-ratio: 4 / 3;
+    border: 2px solid #30291d;
+    border-radius: 10px;
+    background: #e6dcc6;
+    overflow: hidden
+}
+
+.guide-thumb img {
+    object-fit: cover
+}
+
+.guide-card.is-LOCKED .guide-thumb img {
+    filter: grayscale(.7) brightness(.85)
+}
+
+.guide-thumb-missing {
+    display: grid;
+    place-items: center;
+    height: 100%;
+    font-size: 28px
+}
+
+.guide-card-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 0
+}
+
+.guide-num {
+    font-size: 13px;
+    font-weight: 800;
+    color: #7a4a1f
+}
+
+.guide-viewing {
+    font-size: 12px;
+    font-weight: 800;
+    color: #a1471f
+}
+
+.guide-card h4 {
+    margin: 3px 0 2px;
+    font-size: 17px
+}
+
+.guide-card-desc {
+    margin: 0 0 8px;
+    color: #4d4434;
+    font-size: 14px;
+    line-height: 1.4
+}
+
+.guide-card-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px
+}
+
+.guide-card-actions .secondary,
+.guide-card-actions .primary {
+    padding: 6px 12px;
+    font-size: 14px
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .map-spot.is-open,
+    .scene-art,
+    .scene-backdrop,
     .map-toast,
-    .map-sheet {
-        animation: none
+    .guide-backdrop,
+    .guide-modal {
+        animation: none;
+        transition: none
+    }
+
+    .scene-spinner {
+        animation-duration: 2s
     }
 }
 
+/* Tablet */
+@media (max-width: 900px) {
+    .map-btn-label {
+        display: none
+    }
+
+    .dock-title {
+        font-size: 19px
+    }
+}
+
+/* Mobile */
 @media (max-width: 700px) {
     .map-hud {
-        flex-wrap: wrap;
-        gap: 8px;
+        gap: 6px;
+        padding: 5px 6px
+    }
+
+    .map-btn {
+        min-width: 40px;
+        justify-content: center;
         padding: 6px 8px
     }
 
     .map-progress {
-        order: 3;
-        flex-basis: 100%;
-        font-size: 13px
+        font-size: 12px
     }
 
     .map-progress strong {
-        font-size: 15px
+        font-size: 14px
     }
 
-    .map-hud .primary {
+    .map-continue {
+        padding: 8px 10px;
+        font-size: 14px
+    }
+
+    /* Arrows float just above the dock so the panel gets the full width. */
+    .map-dock {
+        grid-template-columns: minmax(0, 1fr);
+        bottom: 8px
+    }
+
+    .map-arrow {
+        position: absolute;
+        top: -54px;
+        width: 44px;
+        height: 44px;
+        font-size: 16px
+    }
+
+    .map-arrow-prev {
+        left: 2px
+    }
+
+    .map-arrow-next {
+        right: 2px
+    }
+
+    .dock-main {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-areas: "info" "play" "chips";
+        gap: 8px;
+        padding: 8px 10px
+    }
+
+    .dock-title {
+        font-size: 17px
+    }
+
+    .dock-desc {
+        font-size: 13px
+    }
+
+    .dock-play {
+        max-width: none;
+        padding: 9px 12px;
+        font-size: 14px
+    }
+
+    .level-chips {
+        justify-content: flex-start
+    }
+
+    .level-chip {
+        width: 32px;
+        height: 32px;
+        font-size: 14px
+    }
+
+    .scene-frame {
+        left: 6px;
+        right: 6px
+    }
+
+    /* Bottom sheet; the whole sheet scrolls on its own */
+    .guide-backdrop {
+        align-items: flex-end;
+        padding: 0
+    }
+
+    .guide-modal {
+        display: block;
+        max-height: 92dvh;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        border-radius: 20px 20px 0 0;
+        border-bottom: 0;
+        box-shadow: 0 -6px 20px rgba(0, 0, 0, .3)
+    }
+
+    .guide-intro {
+        overflow: visible;
+        padding: 20px 16px 16px;
+        border-right: 0;
+        border-bottom: 3px solid #30291d
+    }
+
+    .guide-intro h2 {
+        font-size: 23px;
+        margin-right: 44px
+    }
+
+    .guide-levels {
+        overflow: visible
+    }
+
+    .guide-levels h3 {
+        padding: 14px 16px 8px
+    }
+
+    .guide-levels ol {
+        overflow: visible;
+        padding: 12px
+    }
+
+    .guide-card {
+        grid-template-columns: 76px minmax(0, 1fr);
+        gap: 10px
+    }
+
+    .guide-thumb {
+        width: 76px
+    }
+}
+
+/* ---------- Scene transitions (home ⇄ map ⇄ stage) ---------- */
+/* Leaving: the current screen is pushed away (forward = camera flies in). */
+html[data-scene-leave="forward"] .scene-screen {
+    animation: scene-leave-forward .45s cubic-bezier(.55, 0, .7, .4) forwards;
+    pointer-events: none
+}
+
+html[data-scene-leave="back"] .scene-screen {
+    animation: scene-leave-back .45s cubic-bezier(.55, 0, .7, .4) forwards;
+    pointer-events: none
+}
+
+.scene-enter-forward {
+    animation: scene-enter-forward .5s cubic-bezier(.2, .7, .3, 1) both
+}
+
+.scene-enter-back {
+    animation: scene-enter-back .5s cubic-bezier(.2, .7, .3, 1) both
+}
+
+@keyframes scene-leave-forward {
+    to { opacity: 0; transform: translateX(-12%) scale(1.15); filter: blur(6px) }
+}
+
+@keyframes scene-enter-forward {
+    from { opacity: 0; transform: translateX(14%) scale(1.08); filter: blur(6px) }
+}
+
+@keyframes scene-leave-back {
+    to { opacity: 0; transform: translateX(12%) scale(.92); filter: blur(4px) }
+}
+
+@keyframes scene-enter-back {
+    from { opacity: 0; transform: translateX(-14%) scale(.94); filter: blur(4px) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html[data-scene-leave] .scene-screen,
+    .scene-enter-forward,
+    .scene-enter-back {
+        animation: none
+    }
+}
+
+/* ---------- Stage screen (/chapter/1/stage/[level]) ---------- */
+.stage-screen {
+    position: fixed;
+    inset: 0;
+    overflow: hidden;
+    background: #2f4a26 url("/assets/background.png") center / cover no-repeat
+}
+
+.stage-loading {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 10px 16px;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 14px;
+    box-shadow: 4px 5px #30291d;
+    font-weight: 700
+}
+
+/* Phaser stages (not yet converted) inside the same full-screen frame */
+.stage-classic {
+    display: grid;
+    align-content: start;
+    gap: 10px;
+    height: 100%;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 10px;
+    overflow-y: auto
+}
+
+.stage-classic .dialog,
+.stage-keys {
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 12px;
+    box-shadow: 3px 4px #30291d
+}
+
+.stage-keys {
+    margin: 0;
+    padding: 8px 12px;
+    color: #674c1b;
+    font-size: 13px;
+    font-weight: 600
+}
+
+/* ---------- Adventure stage: full-screen world + floating UI ---------- */
+.adv {
+    position: absolute;
+    inset: 0
+}
+
+.adv-scene {
+    --ui-space: 0px;
+    position: absolute;
+    inset: 0;
+    /* clip, not hidden: a hidden box can still be scrolled by focus() */
+    overflow: hidden;
+    overflow: clip;
+    container-type: size;
+    background: radial-gradient(ellipse at 50% 45%, #6f9a4a, #2f5228 75%)
+}
+
+/* The world covers the screen; the camera moves it (transform set in JS). */
+.adv-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: clip;
+    will-change: transform;
+    cursor: pointer
+}
+
+.adv-backdrop {
+    position: absolute;
+    height: auto;
+    max-width: none;
+    user-select: none;
+    pointer-events: none
+}
+
+.adv-light {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 30% 10%, rgba(255, 236, 170, .25), transparent 55%)
+}
+
+.adv-vignette {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, transparent 55%, rgba(20, 30, 10, .45))
+}
+
+/* Characters are anchored by their feet: (left, top) is the ground contact
+   point, the box grows upward from it. */
+.adv-sprite,
+.adv-player {
+    position: absolute;
+    pointer-events: none;
+    transform-origin: 50% 100%
+}
+
+.adv-sprite {
+    transform: translate(-50%, -100%)
+}
+
+.sprite-granny {
+    aspect-ratio: 100 / 156
+}
+
+.sprite-dog {
+    aspect-ratio: 120 / 80
+}
+
+.sprite-svg {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    overflow: visible
+}
+
+.sprite-granny .sprite-svg {
+    animation: adv-idle 2.6s ease-in-out infinite;
+    transform-origin: 50% 100%
+}
+
+.sprite-zzz {
+    font: 800 16px system-ui, sans-serif;
+    fill: #30291d;
+    animation: adv-zzz 2.4s ease-in-out infinite
+}
+
+/* Contact shadow centred on the feet line, not below the box. */
+.adv-shadow {
+    position: absolute;
+    left: 50%;
+    bottom: 0;
+    width: 64%;
+    height: 9%;
+    transform: translate(-50%, 45%);
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(25, 18, 6, .55), rgba(25, 18, 6, 0))
+}
+
+.sprite-dog .adv-shadow {
+    width: 90%;
+    height: 22%;
+    transform: translate(-50%, 35%)
+}
+
+.adv-player {
+    --depth: 1;
+    --face: 1;
+    --foot: 0%;
+    height: 25%;
+    aspect-ratio: 2 / 3;
+    transform: translate(-50%, -100%) scale(var(--depth));
+    transition: opacity .8s ease
+}
+
+/* Shift the sprite down by its own transparent foot padding so the drawn
+   feet (not the image edge) touch the ground point. */
+.adv-player img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 50% 100%;
+    transform: translateY(var(--foot)) scaleX(var(--face));
+    transform-origin: 50% 100%
+}
+
+/* Walk cycle: a slight sway + squash, feet stay on the ground. */
+.adv-player.is-walking img {
+    animation: adv-walk .4s ease-in-out infinite
+}
+
+.adv-player.is-exiting {
+    opacity: 0;
+    transition-delay: .5s
+}
+
+/* Hotspots: transparent over painted props / sprites */
+.adv-spot {
+    position: absolute;
+    z-index: 2000;
+    padding: 0;
+    border: 0;
+    border-radius: 16px;
+    background: transparent;
+    cursor: pointer;
+    transition: box-shadow .15s, background-color .15s;
+    -webkit-tap-highlight-color: transparent
+}
+
+.adv-spot:hover,
+.adv-spot:focus-visible,
+.adv-spot.is-near {
+    background: rgba(255, 236, 160, .14);
+    box-shadow: 0 0 0 3px rgba(255, 214, 102, .95), 0 0 20px 4px rgba(255, 196, 64, .6)
+}
+
+.adv-spot:focus-visible {
+    outline: 3px solid #30291d;
+    outline-offset: 2px
+}
+
+.adv-spot-label {
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 6px);
+    display: none;
+    padding: 3px 10px;
+    transform: translateX(-50%);
+    background: #fff4d6;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    box-shadow: 2px 3px #30291d;
+    color: #29251e;
+    font-size: 13px;
+    font-weight: 800;
+    white-space: nowrap;
+    pointer-events: none
+}
+
+.adv-spot.label-start .adv-spot-label {
+    left: 4px;
+    transform: none
+}
+
+.adv-spot.label-end .adv-spot-label {
+    left: auto;
+    right: 4px;
+    transform: none
+}
+
+.adv-spot:hover .adv-spot-label,
+.adv-spot:focus-visible .adv-spot-label,
+.adv-spot.is-near .adv-spot-label {
+    display: block
+}
+
+.adv-spot-sparkle {
+    position: absolute;
+    top: 4%;
+    right: 8%;
+    color: #fff6c8;
+    font-size: 18px;
+    text-shadow: 0 0 6px #ffce67, 0 0 2px #30291d;
+    animation: adv-sparkle 1.6s ease-in-out infinite;
+    pointer-events: none
+}
+
+.adv-scene.is-using .adv-spot {
+    cursor: copy
+}
+
+/* Foreground bushes drift slower than the camera for depth. */
+.adv-fg {
+    position: absolute;
+    inset: auto -6% -1% -6%;
+    z-index: 3;
+    display: flex;
+    justify-content: space-between;
+    transform: translateX(calc(var(--cam-x, 0px) * .18));
+    pointer-events: none
+}
+
+.fg-bush {
+    width: min(26%, 320px);
+    height: auto;
+    margin-bottom: -2%
+}
+
+/* Floating wooden HUD */
+.adv-top {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+    z-index: 20;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 6px 8px;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 16px;
+    box-shadow: 0 3px 0 #c89a3c, 4px 6px 0 #30291d
+}
+
+.stage-classic .adv-top {
+    position: static;
+    width: 100%
+}
+
+.adv-top-title {
+    flex: 1;
+    min-width: 0;
+    display: grid;
+    line-height: 1.3
+}
+
+.adv-top-title strong {
+    font-size: 17px
+}
+
+.adv-top-objective {
+    overflow: hidden;
+    color: #674c1b;
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap
+}
+
+.adv-hero-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 12px 2px 4px;
+    background: #ffdf7c;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    font-weight: 800;
+    white-space: nowrap
+}
+
+.adv-hero-chip img {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    background: #fff;
+    border: 2px solid #30291d;
+    border-radius: 50%
+}
+
+/* Quest card (collapsible) */
+.adv-quest {
+    position: absolute;
+    top: 82px;
+    right: 12px;
+    z-index: 15;
+    width: min(280px, calc(100% - 24px));
+    max-height: calc(100% - 300px);
+    overflow-y: auto;
+    padding: 10px 12px;
+    background: rgba(255, 244, 214, .96);
+    border: 3px solid #30291d;
+    border-radius: 14px;
+    box-shadow: 0 3px 0 #c89a3c, 4px 5px 0 #30291d;
+    animation: adv-slide-in .25s ease-out
+}
+
+.adv-quest h3 {
+    margin: 0 0 6px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: .03em
+}
+
+.adv-objective {
+    margin: 0 0 8px;
+    font-weight: 700
+}
+
+.adv-notes {
+    display: grid;
+    gap: 3px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 14px
+}
+
+.adv-notes li {
+    position: relative;
+    padding-left: 24px
+}
+
+.adv-notes li::before {
+    content: "☐";
+    position: absolute;
+    left: 2px;
+    color: #8b8170
+}
+
+.adv-notes li.is-done {
+    color: #6c6353;
+    text-decoration: line-through
+}
+
+.adv-notes li.is-done::before {
+    content: "✔";
+    color: #3f8a3a;
+    font-weight: 900
+}
+
+.adv-hint {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 2px dashed #c89a3c;
+    font-size: 14px
+}
+
+.adv-hint p {
+    margin: 2px 0 0
+}
+
+.adv-toast {
+    position: absolute;
+    top: 82px;
+    left: 12px;
+    right: 12px;
+    z-index: 30;
+    width: fit-content;
+    margin: 0 auto;
+    padding: 8px 14px;
+    background: #3b2a17;
+    color: #fff4d6;
+    border: 3px solid #c89a3c;
+    border-radius: 12px;
+    font-weight: 700;
+    animation: cp-pop .25s ease-out
+}
+
+/* Bottom stack: dialogue / win banner above the dock */
+.adv-bottom {
+    position: absolute;
+    left: 10px;
+    right: 10px;
+    bottom: 10px;
+    z-index: 20;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none
+}
+
+.adv-bottom > * {
+    pointer-events: auto
+}
+
+.adv-dialog {
+    display: flex;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+    width: min(760px, 100%);
+    padding: 12px 14px;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 16px;
+    box-shadow: 0 3px 0 #c89a3c, 4px 6px 0 #30291d;
+    animation: adv-rise .22s ease-out
+}
+
+.adv-dialog-portrait {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 64px;
+    height: 64px;
+    overflow: hidden;
+    background: #ffdf7c;
+    border: 3px solid #30291d;
+    border-radius: 50%;
+    font-size: 30px
+}
+
+.adv-dialog-portrait img,
+.adv-dialog-portrait svg {
+    width: 82%;
+    height: 82%;
+    object-fit: contain
+}
+
+.adv-dialog-body {
+    flex: 1;
+    min-width: 180px
+}
+
+.adv-dialog-body strong {
+    color: #7a4a1f
+}
+
+.adv-dialog-body p {
+    margin: 2px 0 0;
+    font-size: 16px;
+    line-height: 1.45
+}
+
+.adv-dialog.is-narrator .adv-dialog-body p {
+    font-style: italic
+}
+
+.adv-next {
+    flex: none;
+    padding: 8px 16px
+}
+
+.adv-choices {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-end
+}
+
+.adv-choices .secondary:hover,
+.adv-choices .secondary:focus-visible {
+    background: #ffdf7c
+}
+
+/* Victory banner: part of the scene UI, not a dimmed modal */
+.adv-win {
+    width: min(460px, 100%);
+    padding: 16px 18px;
+    text-align: center;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 18px;
+    box-shadow: 0 3px 0 #c89a3c, 6px 7px 0 #30291d;
+    animation: adv-rise .35s cubic-bezier(.2, 1.4, .4, 1)
+}
+
+.adv-win-stars {
+    margin: 0;
+    font-size: 28px;
+    letter-spacing: 6px
+}
+
+.adv-win h2 {
+    margin: 2px 0 6px;
+    font-size: 24px
+}
+
+.adv-win p {
+    margin: 0
+}
+
+.adv-win-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 12px
+}
+
+/* Wooden action dock */
+.adv-dock {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    width: min(1100px, 100%);
+    padding: 8px 10px;
+    background: #7a4a1f;
+    background-image: repeating-linear-gradient(90deg, rgba(0, 0, 0, .06) 0 2px, transparent 2px 22px);
+    border: 3px solid #30291d;
+    border-radius: 14px;
+    box-shadow: 0 3px 0 #4d2e12, 4px 5px 0 #30291d
+}
+
+.adv-target {
+    flex: 0 1 150px;
+    color: #fff4d6;
+    font-size: 13px
+}
+
+.adv-target strong {
+    color: #ffce67
+}
+
+.adv-acts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px
+}
+
+.adv-act {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 11px;
+    border: 2px solid #30291d;
+    border-radius: 10px;
+    background: #fff4d6;
+    font-weight: 800;
+    box-shadow: 2px 3px #30291d;
+    transition: transform .12s
+}
+
+.adv-act:not(:disabled):hover,
+.adv-act:focus-visible {
+    transform: translateY(-2px);
+    background: #ffdf7c
+}
+
+.adv-act-hint {
+    background: #fdbd46
+}
+
+.adv-inventory {
+    display: flex;
+    gap: 5px;
+    margin-left: auto
+}
+
+.adv-slot {
+    display: grid;
+    justify-items: center;
+    align-content: center;
+    width: 54px;
+    height: 50px;
+    padding: 2px;
+    border: 2px solid #30291d;
+    border-radius: 10px;
+    background: #e8cf8e;
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .5);
+    transition: transform .12s
+}
+
+.adv-slot.is-empty {
+    background: #a8753d;
+    border-style: dashed;
+    border-color: #4d2e12
+}
+
+.adv-slot:not(.is-empty):hover {
+    transform: translateY(-2px)
+}
+
+.adv-slot.is-selected {
+    background: #ffce67;
+    box-shadow: 0 0 0 3px #fff4d6
+}
+
+.adv-slot-icon {
+    font-size: 20px;
+    line-height: 1.1
+}
+
+.adv-slot-name {
+    font-size: 9px;
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: center
+}
+
+.adv-dpad {
+    display: grid;
+    grid-template-columns: repeat(3, 28px);
+    grid-template-rows: repeat(2, 24px);
+    gap: 3px
+}
+
+.adv-dpad button {
+    padding: 0;
+    border: 2px solid #30291d;
+    border-radius: 7px;
+    background: #e8cf8e;
+    font-size: 11px;
+    touch-action: none
+}
+
+.adv-dpad button:nth-child(1) {
+    grid-column: 2
+}
+
+.adv-dpad button:nth-child(2) {
+    grid-column: 1;
+    grid-row: 2
+}
+
+.adv-dpad button:nth-child(3) {
+    grid-column: 2;
+    grid-row: 2
+}
+
+.adv-dpad button:nth-child(4) {
+    grid-column: 3;
+    grid-row: 2
+}
+
+/* Mouse + keyboard players walk by clicking or WASD; the pad is for touch. */
+@media (hover: hover) and (pointer: fine) {
+    .adv-dpad {
+        display: none
+    }
+}
+
+.adv-holding {
+    flex-basis: 100%;
+    margin: 0;
+    color: #fff4d6;
+    font-size: 13px
+}
+
+.adv-holding strong {
+    color: #ffce67
+}
+
+@keyframes adv-walk {
+    0%, 100% { transform: translateY(var(--foot)) scaleX(var(--face)) rotate(0) scaleY(1) }
+    25% { transform: translateY(var(--foot)) scaleX(var(--face)) rotate(-2.5deg) scaleY(.97) }
+    75% { transform: translateY(var(--foot)) scaleX(var(--face)) rotate(2.5deg) scaleY(.97) }
+}
+
+@keyframes adv-idle {
+    50% { transform: scaleY(.985) }
+}
+
+@keyframes adv-zzz {
+    0% { opacity: 0; transform: translate(0, 4px) }
+    50% { opacity: 1 }
+    100% { opacity: 0; transform: translate(4px, -8px) }
+}
+
+@keyframes adv-sparkle {
+    50% { opacity: .35; transform: scale(.75) rotate(20deg) }
+}
+
+@keyframes adv-rise {
+    from { opacity: 0; transform: translateY(14px) }
+}
+
+@keyframes adv-slide-in {
+    from { opacity: 0; transform: translateX(16px) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sprite-granny .sprite-svg,
+    .sprite-zzz,
+    .adv-spot-sparkle,
+    .adv-player.is-walking img,
+    .adv-dialog,
+    .adv-toast,
+    .adv-win,
+    .adv-quest {
+        animation: none
+    }
+}
+
+@media (max-width: 900px) {
+    .adv-target {
+        flex-basis: 100%
+    }
+
+    .adv-inventory {
+        margin-left: 0
+    }
+}
+
+@media (max-width: 700px) {
+    /* Phones: the world fits between the HUD and the dock instead of
+       covering the full (tall) screen, so characters stay a sane size. */
+    .adv-scene {
+        --ui-space: 330px
+    }
+
+    .adv-top {
+        gap: 6px;
+        padding: 5px 6px
+    }
+
+    .adv-top-title strong {
+        font-size: 14px
+    }
+
+    .adv-top-objective {
+        font-size: 12px
+    }
+
+    .adv-hero-chip {
+        padding: 2px
+    }
+
+    .adv-hero-name {
+        display: none
+    }
+
+    .adv-quest {
+        top: 72px;
+        max-height: calc(100% - 330px)
+    }
+
+    .adv-toast {
+        top: 72px
+    }
+
+    .adv-bottom {
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        gap: 6px
+    }
+
+    .adv-dialog {
+        gap: 8px;
+        padding: 8px 10px
+    }
+
+    .adv-dialog-portrait {
+        width: 42px;
+        height: 42px;
+        font-size: 20px
+    }
+
+    .adv-dialog-body {
+        min-width: 0
+    }
+
+    .adv-dialog-body p {
+        font-size: 14px
+    }
+
+    .adv-spot-label {
+        font-size: 11px
+    }
+
+    .adv-dock {
+        gap: 6px;
+        padding: 6px
+    }
+
+    .adv-acts {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        width: 100%
+    }
+
+    .adv-act {
+        flex-direction: column;
+        justify-content: center;
+        gap: 0;
+        padding: 5px 2px;
+        font-size: 10px
+    }
+
+    .adv-act > span {
+        font-size: 10px
+    }
+
+    .adv-inventory {
+        flex: 1
+    }
+
+    .adv-slot {
+        width: auto;
         flex: 1;
-        padding: 8px 10px
-    }
-
-    .map-home {
-        padding: 8px 10px
+        height: 44px
     }
 }

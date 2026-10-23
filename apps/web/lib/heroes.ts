@@ -6,6 +6,7 @@ export const HEROES: Hero[] = [
     tagline: "Chém trước, hỏi sau",
     ability: "SLASH",
     asset: "/characters/hero-1.png",
+    footPad: 1.9,
     tint: "#94c98c",
   },
   {
@@ -14,6 +15,7 @@ export const HEROES: Hero[] = [
     tagline: "Biết hết, làm không được",
     ability: "ANALYZE",
     asset: "/characters/hero-2.png",
+    footPad: 4.7,
     tint: "#f4d25b",
   },
   {
@@ -22,6 +24,7 @@ export const HEROES: Hero[] = [
     tagline: "Tôi quen ông này!",
     ability: "NEGOTIATE",
     asset: "/characters/hero-3.png",
+    footPad: 3.7,
     tint: "#9aaccf",
   },
   {
@@ -30,6 +33,7 @@ export const HEROES: Hero[] = [
     tagline: "Đấm cả thế giới",
     ability: "SMASH",
     asset: "/characters/hero-4.png",
+    footPad: 4.4,
     tint: "#f19e97",
   },
   {
@@ -38,6 +42,7 @@ export const HEROES: Hero[] = [
     tagline: "Không ai đoán được",
     ability: "TRICK",
     asset: "/characters/hero-5.png",
+    footPad: 2.5,
     tint: "#fa8c70",
   },
 ];

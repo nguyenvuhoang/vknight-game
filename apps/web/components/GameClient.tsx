@@ -1,24 +1,28 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HEROES, getHero, isHeroId } from "@/lib/heroes";
+import { mapHref, playHref } from "@/lib/chapter1";
 import { loadChapter } from "@/lib/catalog";
-import { completed, getGuestId, saveLocal, syncProgress } from "@/lib/progress";
-import type { Chapter, HeroId, GameNotice } from "@/lib/types";
+import { completed } from "@/lib/progress";
+import { goToScene, useSceneEnter } from "@/lib/transition";
+import type { Chapter, HeroId } from "@/lib/types";
 import CharacterProfileModal from "./character-profile/CharacterProfileModal";
-const PhaserGame = dynamic(() => import("./PhaserGame"), { ssr: false });
+// Home screen: hero + stage selection. Stages play on their own full-screen
+// route (/chapter/1/stage/[level]), entered with a scene transition.
 export default function GameClient() {
+  const router = useRouter();
+  const root = useRef<HTMLDivElement>(null);
+  useSceneEnter(root);
   const [hero, setHero] = useState<HeroId>("sword");
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [stage, setStage] = useState(1);
-  const [playing, setPlaying] = useState(false);
-  const [notice, setNotice] = useState<GameNotice | null>(null);
   const [max, setMax] = useState(0);
   const [error, setError] = useState("");
   const [profileHero, setProfileHero] = useState<HeroId | null>(null);
-  // Deep link from the chapter map: /?hero=…&stage=…&play=1
+  // ?hero=… keeps the selected hero when returning; old ?stage=…&play=1
+  // links are forwarded to the stage route.
   const pending = useRef<{ hero: HeroId; stage: number; play: boolean } | null>(
     null,
   );
@@ -43,28 +47,22 @@ export default function GameClient() {
     const done = completed(hero);
     const p = pending.current;
     setMax(done);
-    setNotice(null);
     if (p && p.hero === hero) {
       pending.current = null;
       // Same unlock rule as the stage buttons: never deep-link past max + 1.
-      setStage(Math.min(Math.max(1, p.stage), done + 1));
-      setPlaying(p.play);
+      const n = Math.min(Math.max(1, p.stage), done + 1);
+      setStage(n);
+      if (p.play) router.replace(playHref(hero, n));
     } else {
       setStage(1);
-      setPlaying(false);
     }
-  }, [hero]);
+  }, [hero, router]);
   const current = chapter?.levels.find((l) => l.number === stage);
-  const onNotice = (event: GameNotice) => {
-    setNotice(event);
-    if (event.kind === "win") {
-      saveLocal(hero, stage);
-      setMax(completed(hero));
-      syncProgress(getGuestId(), hero, stage);
-    }
-  };
   return (
-    <div className={`shell ${playing ? "" : "shell-menu"}`}>
+    <>
+      {/* Full-screen backdrop + signpost (position: fixed). Kept OUTSIDE the
+          animated .scene-screen: a transform/filter on an ancestor would make
+          it the containing block and shrink the backdrop to the content column. */}
       <div className="scene" aria-hidden>
         {/* Painted over the empty signpost in background.png. Decorative for
             now; can become an interactive chapter map later. */}
@@ -77,18 +75,18 @@ export default function GameClient() {
           sizes="300px"
         />
       </div>
-      <h1 className="title">
-        <Image
-          src="/assets/banghieu.png"
-          alt="vKnight Phiêu Lưu Ký — 5 thằng ngáo · 1 hành trình · Vô số tai nạn"
-          width={2172}
-          height={724}
-          sizes="(max-width: 900px) 94vw, 850px"
-          preload
-        />
-      </h1>
-      {error && <p className="toast">{error}</p>}
-      {!playing && (
+      <div ref={root} className="shell shell-menu scene-screen">
+        <h1 className="title">
+          <Image
+            src="/assets/banghieu.png"
+            alt="vKnight Phiêu Lưu Ký — 5 thằng ngáo · 1 hành trình · Vô số tai nạn"
+            width={2172}
+            height={724}
+            sizes="(max-width: 900px) 94vw, 850px"
+            preload
+          />
+        </h1>
+        {error && <p className="toast">{error}</p>}
         <div className="menu-stage">
           <h2 className="section-label">1. Chọn nhân vật</h2>
           <div className="hero-grid">
@@ -145,68 +143,25 @@ export default function GameClient() {
               <button
                 className="primary"
                 disabled={!chapter}
-                onClick={() => {
-                  setNotice(null);
-                  setPlaying(true);
-                }}
+                onClick={() => goToScene(router, playHref(hero, stage), "forward")}
               >
                 ▶ Chơi ải {stage}: {current?.title || "..."}
               </button>
-              <Link className="map-button" href={`/chapter/1/map?hero=${hero}`}>
+              <a
+                className="map-button"
+                href={mapHref(hero, stage)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  goToScene(router, mapHref(hero, stage), "forward");
+                }}
+              >
                 🗺 Xem bản đồ phiêu lưu
-              </Link>
+              </a>
               <span>⚔ {getHero(hero).ability}</span>
             </div>
           </section>
         </div>
-      )}
-      {playing && current && (
-        <section className="panel">
-          <div className="game-hud">
-            <strong>
-              Ải {stage}/10 — {current.title}
-            </strong>
-            <span>{getHero(hero).name}</span>
-            <button className="secondary" onClick={() => setPlaying(false)}>
-              ← Menu
-            </button>
-          </div>
-          <PhaserGame
-            key={`${hero}:${current.id}`}
-            hero={hero}
-            level={current}
-            onNotice={onNotice}
-          />
-          <div className="dialog">
-            {notice ? notice.text : current.story}
-            {notice?.kind === "win" && (
-              <div className="actions">
-                <button
-                  className="primary"
-                  onClick={() => {
-                    if (stage < (chapter?.levels.length ?? 0)) {
-                      setStage((v) => v + 1);
-                      setNotice(null);
-                    } else {
-                      setPlaying(false);
-                    }
-                  }}
-                >
-                  {" "}
-                  {stage < (chapter?.levels.length ?? 0)
-                    ? "▶ Ải tiếp theo"
-                    : "Hoàn tất Chapter 1"}{" "}
-                </button>
-              </div>
-            )}
-          </div>
-          <p className="status">
-            PC: A/D hoặc ←/→ để chạy; Space để nhảy; E để nói chuyện; F dùng
-            chiêu. Mobile: nút cảm ứng ngay dưới game.
-          </p>
-        </section>
-      )}
-      <footer className="footer">vKnight@2026</footer>
-    </div>
+      </div>
+    </>
   );
 }

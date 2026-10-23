@@ -6,6 +6,8 @@ export type Hero = {
   ability: string;
   asset: string;
   tint: string;
+  /** Transparent space under the feet in the sprite, % of image height. */
+  footPad?: number;
 };
 export type Level = {
   id: string;
