@@ -3,6 +3,10 @@ import { useEffect, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import AdventureStage from "@/components/adventure/AdventureStage";
+import GameplayStage from "@/components/gameplay/GameplayStage";
+import { useChapterMaps } from "@/lib/api/chapters";
+import { useMapGameplay } from "@/lib/api/gameplay";
+import { getStageScene, mapCodeFor, type StageScene } from "@/lib/gameplay/stage-scenes";
 import { getAdventureStage } from "@/lib/adventure/stages";
 import { loadChapter } from "@/lib/catalog";
 import { mapHref, playHref } from "@/lib/chapter1";
@@ -13,8 +17,9 @@ import type { Chapter, GameNotice, HeroId } from "@/lib/types";
 
 const PhaserGame = dynamic(() => import("./PhaserGame"), { ssr: false });
 
-// Full-screen stage: adventure-puzzle scene when the level has one, otherwise
-// the existing Phaser side-view game. Same progress source and unlock rule as
+// Full-screen stage: backend-driven gameplay (WF_BO_GET_MAP_GAMEPLAY) when the
+// map has a registered scene, else the local adventure-puzzle scene when the
+// level has one, otherwise the existing Phaser side-view game. Same progress source and unlock rule as
 // the home screen and chapter map.
 export default function StageScreen({ hero, level }: { hero: HeroId; level: number }) {
   const router = useRouter();
@@ -41,6 +46,9 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
   const current = chapter?.levels.find((l) => l.number === level);
   const total = chapter?.levels.length ?? 10;
   const adventure = getAdventureStage(level);
+  const mapCode = mapCodeFor("CHAP01", level);
+  const scene = getStageScene(mapCode);
+  const [offline, setOffline] = useState(false);
   const heroInfo = getHero(hero);
 
   const onNotice = (event: GameNotice) => {
@@ -61,6 +69,20 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
         <p className="stage-loading" role="status">
           <span className="scene-spinner" aria-hidden /> Đang vào Ải {level}…
         </p>
+      ) : scene && !offline ? (
+        <BackendStage
+          mapCode={mapCode}
+          scene={scene}
+          hero={hero}
+          level={level}
+          total={total}
+          fallbackTitle={current.title}
+          canPlayOffline={!!adventure}
+          onOffline={() => setOffline(true)}
+          onWin={(text) => onNotice({ kind: "win", text })}
+          onNext={toNext}
+          onMap={toMap}
+        />
       ) : adventure ? (
         <AdventureStage
           config={adventure}
@@ -105,5 +127,71 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
         </div>
       )}
     </div>
+  );
+}
+
+type BackendStageProps = {
+  mapCode: string;
+  scene: StageScene;
+  hero: HeroId;
+  level: number;
+  total: number;
+  fallbackTitle: string;
+  canPlayOffline: boolean;
+  onOffline: () => void;
+  onWin: (text: string) => void;
+  onNext: () => void;
+  onMap: () => void;
+};
+
+/** Loads the map's gameplay through the BFF; clear loading / error states, no silent fallback. */
+function BackendStage({ mapCode, scene, hero, level, total, fallbackTitle, canPlayOffline, onOffline, onWin, onNext, onMap }: BackendStageProps) {
+  const gameplay = useMapGameplay(mapCode);
+  const chapter = useChapterMaps(1); // cached; gives the official title + completion text
+  const map = chapter.chapter?.maps.find((m) => m.level === level);
+  if (gameplay.status !== "ready") {
+    return (
+      <div className="map-state stage-state" role={gameplay.status === "error" ? "alert" : "status"}>
+        {gameplay.status === "error" ? (
+          <>
+            <span aria-hidden>😵</span>
+            <strong>{gameplay.error}</strong>
+            <div className="stage-state-actions">
+              <button type="button" className="primary" onClick={gameplay.retry}>
+                ↻ Thử lại
+              </button>
+              {canPlayOffline && (
+                <button type="button" className="secondary" onClick={onOffline}>
+                  🎒 Chơi bản offline
+                </button>
+              )}
+              <button type="button" className="secondary" onClick={onMap}>
+                🗺 Về bản đồ
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <span className="scene-spinner" aria-hidden />
+            <strong>Đang dựng màn chơi…</strong>
+          </>
+        )}
+      </div>
+    );
+  }
+  return (
+    <GameplayStage
+      gameplay={gameplay.data.gameplay}
+      warnings={gameplay.data.warnings}
+      scene={scene}
+      hero={hero}
+      level={level}
+      total={total}
+      title={map?.title ?? fallbackTitle}
+      completionText={map?.completionText ?? null}
+      onWin={onWin}
+      onNext={onNext}
+      onMap={onMap}
+    />
   );
 }

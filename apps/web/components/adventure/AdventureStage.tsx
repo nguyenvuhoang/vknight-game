@@ -1,8 +1,9 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSceneWalker } from "@/lib/scene/use-scene-walker";
 import Image from "next/image";
 import { check, interact, runEffects, type Outcome, type PuzzleState } from "@/lib/adventure/engine";
-import type { AdventureStageConfig, Choice, Hotspot, Line, Point, Verb } from "@/lib/adventure/types";
+import type { AdventureStageConfig, Choice, Hotspot, Line, Verb } from "@/lib/adventure/types";
 import { getHero } from "@/lib/heroes";
 import type { HeroId, Level } from "@/lib/types";
 import { Bushes, Dog, Granny } from "./Sprites";
@@ -20,30 +21,16 @@ type Props = {
 type Dialog = { lines: Line[]; i: number; choice?: Choice };
 type Pending = { spot: string; verb: Verb; item: string | null };
 
-const SPEED = 24; // % of scene width per second
-const NEAR = 7; // proximity radius, in % of scene width
-const KEY_DIRS: Record<string, [number, number]> = {
-  ArrowLeft: [-1, 0], a: [-1, 0], A: [-1, 0],
-  ArrowRight: [1, 0], d: [1, 0], D: [1, 0],
-  ArrowUp: [0, -1], w: [0, -1], W: [0, -1],
-  ArrowDown: [0, 1], s: [0, 1], S: [0, 1],
-};
-
 // Full-screen adventure scene. The world (a crop of the Chapter 1 painting)
 // covers the viewport and a camera follows the hero; UI floats on top.
 export default function AdventureStage({ config, hero, level, total, onWin, onNext, onMap }: Props) {
   const heroInfo = getHero(hero);
   const { crop } = config.scene;
   const aspect = crop.w / crop.h;
-  const yMin = Math.min(...config.walk.map((r) => r.y0));
-  const yMax = Math.max(...config.walk.map((r) => r.y1));
-  // One depth scale for everyone standing on the ground: further up = further away.
-  const depthAt = (y: number) => 0.7 + (0.35 * (Math.min(Math.max(y, yMin), yMax) - yMin)) / (yMax - yMin || 1);
   const spots = useMemo(() => new Map(config.hotspots.map((h) => [h.id, h])), [config]);
 
   const [puzzle, setPuzzle] = useState<PuzzleState>({ flags: [], inv: [] });
   const [selected, setSelected] = useState<string | null>(null);
-  const [near, setNear] = useState<string | null>(null);
   const [dialog, setDialog] = useState<Dialog | null>({ lines: config.intro, i: 0 });
   const [toast, setToast] = useState<{ id: number; text: string } | null>(null);
   const [seen, setSeen] = useState<string[]>([]);
@@ -58,19 +45,16 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
     if (window.matchMedia("(max-width: 700px)").matches) setQuestOpen(false);
   }, []);
 
-  const sceneEl = useRef<HTMLDivElement>(null);
-  const worldEl = useRef<HTMLDivElement>(null);
-  const playerEl = useRef<HTMLDivElement>(null);
-  const hudEl = useRef<HTMLElement>(null);
-  const dockEl = useRef<HTMLDivElement>(null);
-  const pos = useRef<Point>({ ...config.spawn });
-  const target = useRef<Point | null>(null);
-  const pending = useRef<Pending | null>(null);
-  const keys = useRef(new Set<string>());
-  const facing = useRef(1);
-  const cam = useRef<{ x: number; y: number } | null>(null);
   const puzzleRef = useRef(puzzle);
   puzzleRef.current = puzzle;
+  const walker = useSceneWalker({
+    aspect,
+    walk: config.walk,
+    spawn: config.spawn,
+    mode: () => (exiting ? "scripted" : dialog || showWin ? "paused" : "active"),
+    targets: () => config.hotspots.map((h) => ({ id: h.id, at: h.stand })),
+  });
+  const { near, depthAt } = walker;
   const pausedRef = useRef(true);
   pausedRef.current = !!dialog || showWin;
   const exitingRef = useRef(false);
@@ -88,20 +72,6 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
     const t = setTimeout(() => setToast(null), 2600);
     return () => clearTimeout(t);
   }, [toast]);
-
-  // ---------- walking ----------
-  const clampWalk = useCallback(
-    (p: Point): Point => {
-      let best = p, bestD = Infinity;
-      for (const r of config.walk) {
-        const q = { x: Math.min(r.x1, Math.max(r.x0, p.x)), y: Math.min(r.y1, Math.max(r.y0, p.y)) };
-        const d = Math.hypot(q.x - p.x, (q.y - p.y) / aspect);
-        if (d < bestD) [best, bestD] = [q, d];
-      }
-      return best;
-    },
-    [config.walk, aspect],
-  );
 
   const apply = useCallback(
     (out: Outcome, spotId?: string) => {
@@ -133,119 +103,18 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
   const walkTo = useCallback(
     (spot: Hotspot, verb: Verb, item: string | null) => {
       if (pausedRef.current || exitingRef.current) return;
-      const p = pos.current;
-      pending.current = { spot: spot.id, verb, item };
-      if (Math.hypot(spot.stand.x - p.x, (spot.stand.y - p.y) / aspect) < 2) {
-        target.current = null;
-        pending.current = null;
-        perform({ spot: spot.id, verb, item });
-      } else {
-        target.current = { ...spot.stand };
-      }
+      walker.walkTo(spot.stand, () => perform({ spot: spot.id, verb, item }));
     },
-    [aspect, perform],
+    [perform, walker],
   );
-
-  // Movement loop: writes positions straight to the DOM (no re-render per frame).
-  useEffect(() => {
-    let raf = 0;
-    let last = performance.now();
-    let lastNear: string | null = null;
-    const frame = (t: number) => {
-      const dt = Math.min(0.05, (t - last) / 1000);
-      last = t;
-      const p = pos.current;
-      let moving = false;
-      if (!pausedRef.current || exitingRef.current) {
-        let dx = 0, dy = 0;
-        if (!exitingRef.current) keys.current.forEach((k) => {
-          const d = KEY_DIRS[k];
-          if (d) [dx, dy] = [dx + d[0], dy + d[1]];
-        });
-        if (dx || dy) {
-          target.current = null;
-          pending.current = null;
-          const n = Math.hypot(dx, dy);
-          const next = clampWalk({ x: p.x + (dx / n) * SPEED * dt, y: p.y + (dy / n) * SPEED * aspect * dt });
-          moving = next.x !== p.x || next.y !== p.y;
-          if (dx) facing.current = Math.sign(dx);
-          pos.current = next;
-        } else if (target.current) {
-          const tg = target.current;
-          const vx = tg.x - p.x, vy = (tg.y - p.y) / aspect;
-          const dist = Math.hypot(vx, vy), step = SPEED * dt;
-          if (Math.abs(vx) > 0.2) facing.current = Math.sign(vx);
-          if (dist <= step) {
-            pos.current = { ...tg };
-            target.current = null;
-            if (exitingRef.current) setShowWin(true);
-            else if (pending.current) {
-              const pd = pending.current;
-              pending.current = null;
-              perform(pd);
-            }
-          } else {
-            pos.current = { x: p.x + (vx / dist) * step, y: p.y + (vy / dist) * step * aspect };
-            moving = true;
-          }
-        }
-      }
-
-      const q = pos.current;
-      const el = playerEl.current;
-      if (el) {
-        el.style.left = `${q.x}%`;
-        el.style.top = `${q.y}%`;
-        el.style.zIndex = String(Math.round(q.y * 10));
-        el.style.setProperty("--depth", depthAt(q.y).toFixed(3));
-        el.style.setProperty("--face", String(facing.current));
-        el.classList.toggle("is-walking", moving);
-      }
-      // Camera: keep the hero near the middle, never showing past the world edges.
-      const sc = sceneEl.current, w = worldEl.current;
-      if (sc && w) {
-        const sw = sc.clientWidth, sh = sc.clientHeight, ww = w.offsetWidth, wh = w.offsetHeight;
-        const tx = Math.min(0, Math.max(sw - ww, sw / 2 - (q.x / 100) * ww));
-        let ty = Math.min(0, Math.max(sh - wh, sh * 0.55 - (Math.min(q.y, yMax) / 100) * wh));
-        // Narrow screens size the world to the gap between HUD and dock: centre it there.
-        if (wh < sh && hudEl.current && dockEl.current) {
-          const box = sc.getBoundingClientRect();
-          const top = hudEl.current.getBoundingClientRect().bottom - box.top;
-          const bottom = box.bottom - dockEl.current.getBoundingClientRect().top;
-          ty = Math.min(sh - wh, Math.max(0, top + (sh - top - bottom - wh) / 2));
-        }
-        const c = cam.current ?? { x: tx, y: ty };
-        const k = 1 - Math.exp(-dt * 5);
-        c.x += (tx - c.x) * k;
-        c.y += (ty - c.y) * k;
-        cam.current = c;
-        w.style.transform = `translate3d(${c.x.toFixed(1)}px, ${c.y.toFixed(1)}px, 0)`;
-        sc.style.setProperty("--cam-x", `${c.x.toFixed(1)}px`);
-      }
-
-      let nearest: string | null = null, nd = NEAR;
-      if (!exitingRef.current) {
-        for (const h of config.hotspots) {
-          const d = Math.hypot(h.stand.x - q.x, (h.stand.y - q.y) / aspect);
-          if (d < nd) [nearest, nd] = [h.id, d];
-        }
-      }
-      if (nearest !== lastNear) {
-        lastNear = nearest;
-        setNear(nearest);
-      }
-      raf = requestAnimationFrame(frame);
-    };
-    raf = requestAnimationFrame(frame);
-    return () => cancelAnimationFrame(raf);
-  }, [aspect, clampWalk, config.hotspots, perform, yMax, yMin]);
 
   // ---------- dialogue ----------
   const closeDialog = () => {
     setDialog(null);
     if (wonText && !exiting) {
       setExiting(true);
-      target.current = { x: 44, y: 106 }; // walk out through the gate
+      // walk out through the gate, then show the win banner
+      walker.walkTo({ x: 44, y: 106 }, () => setShowWin(true), { clamp: false });
     }
   };
 
@@ -281,44 +150,18 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
-      if (KEY_DIRS[e.key]) {
-        if (e.key.startsWith("Arrow")) e.preventDefault();
-        keys.current.add(e.key);
-      } else if (!pausedRef.current && (e.key === "e" || e.key === "E")) {
+      if (!pausedRef.current && (e.key === "e" || e.key === "E")) {
         const spot = near ? spots.get(near) : undefined;
         if (spot) walkTo(spot, autoVerb(spot), selected);
       } else if (!pausedRef.current && (e.key === "f" || e.key === "F")) act("skill");
       else if (e.key === "h" || e.key === "H") showHint();
       else if (e.key === "Escape") setSelected(null);
     };
-    const up = (e: KeyboardEvent) => keys.current.delete(e.key);
-    const blur = () => keys.current.clear();
     window.addEventListener("keydown", down);
-    window.addEventListener("keyup", up);
-    window.addEventListener("blur", blur);
-    return () => {
-      window.removeEventListener("keydown", down);
-      window.removeEventListener("keyup", up);
-      window.removeEventListener("blur", blur);
-    };
+    return () => window.removeEventListener("keydown", down);
   });
 
-  const onWorldClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (pausedRef.current || exitingRef.current) return;
-    const r = e.currentTarget.getBoundingClientRect();
-    pending.current = null;
-    target.current = clampWalk({ x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 });
-  };
-
-  const hold = (key: string) => ({
-    onPointerDown: (e: React.PointerEvent) => {
-      e.currentTarget.setPointerCapture(e.pointerId);
-      keys.current.add(key);
-    },
-    onPointerUp: () => keys.current.delete(key),
-    onPointerCancel: () => keys.current.delete(key),
-    onLostPointerCapture: () => keys.current.delete(key),
-  });
+  const { onWorldClick, hold } = walker;
 
   // ---------- derived UI ----------
   const objective = config.objectives.find((o) => check(o.when, puzzle));
@@ -346,9 +189,9 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
   return (
     <div className="adv">
       {/* ---------- the world ---------- */}
-      <div ref={sceneEl} className={`adv-scene ${selected ? "is-using" : ""}`}>
+      <div ref={walker.sceneRef} className={`adv-scene ${selected ? "is-using" : ""}`}>
         <div
-          ref={worldEl}
+          ref={walker.worldRef}
           className="adv-world"
           style={{
             aspectRatio: `${crop.w} / ${crop.h}`,
@@ -393,7 +236,7 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
           )}
 
           <div
-            ref={playerEl}
+            ref={walker.playerRef}
             className={`adv-player ${exiting ? "is-exiting" : ""}`}
             style={{ "--foot": `${heroInfo.footPad ?? 0}%` } as React.CSSProperties}
           >
@@ -429,7 +272,7 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
       </div>
 
       {/* ---------- floating UI ---------- */}
-      <header ref={hudEl} className="adv-top">
+      <header ref={walker.hudRef} className="adv-top">
         <button type="button" className="map-btn" onClick={onMap}>
           ← <span className="map-btn-label">Bản đồ</span>
         </button>
@@ -524,7 +367,7 @@ export default function AdventureStage({ config, hero, level, total, onWin, onNe
           </div>
         )}
 
-        <div ref={dockEl} className="adv-dock" role="toolbar" aria-label="Hành động">
+        <div ref={walker.dockRef} className="adv-dock" role="toolbar" aria-label="Hành động">
           <span className="adv-target">
             {nearSpot ? (
               <>

@@ -9,6 +9,8 @@ if (typeof window !== "undefined") {
 /** Workflows the BFF may call. Callers pick from this list, never from user input. */
 export const WORKFLOWS = {
   listCharacters: "WF_BO_GET_LIST_CHARACTER",
+  chapterMap: "WF_BO_GET_CHAPTER_MAP",
+  mapGameplay: "WF_BO_GET_MAP_GAMEPLAY",
 } as const;
 type WorkflowId = (typeof WORKFLOWS)[keyof typeof WORKFLOWS];
 

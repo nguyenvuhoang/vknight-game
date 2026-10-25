@@ -1,14 +1,14 @@
 "use client";
 import { useState } from "react";
 import Image from "next/image";
-import type { Chapter1Level } from "@/lib/chapter1";
+import type { FrontendChapterMap } from "@/lib/api/chapter-types";
 
 type LoadState = "loading" | "ready" | "error";
 
 // One level's artwork, shown whole (object-fit: contain) over a blurred copy of
 // itself so the margins never look empty. Keyed by level in the parent, so
 // switching levels remounts it and replays the fade-in.
-export default function LevelScene({ level }: { level: Chapter1Level }) {
+export default function LevelScene({ level }: { level: FrontendChapterMap }) {
   const [state, setState] = useState<LoadState>("loading");
   const [attempt, setAttempt] = useState(0);
   const sizes = "100vw";

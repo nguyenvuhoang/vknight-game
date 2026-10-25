@@ -1,17 +1,12 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import {
-  CHAPTER1_LEVELS,
-  CHAPTER1_STORY,
-  CHAPTER1_TITLE,
-  STATUS_ICON,
-  STATUS_TEXT,
-  levelStatus,
-  type Chapter1Level,
-} from "@/lib/chapter1";
+import type { FrontendChapterMap, FrontendGameChapter } from "@/lib/api/chapter-types";
+import { STATUS_ICON, STATUS_TEXT, levelStatus } from "@/lib/chapter1";
+import LevelMeta from "./LevelMeta";
 
 type Props = {
+  chapter: FrontendGameChapter;
   heroName: string;
   completedCount: number;
   currentLevel: number;
@@ -20,7 +15,7 @@ type Props = {
   onPlay: (level: number) => void;
 };
 
-function Thumb({ level }: { level: Chapter1Level }) {
+function Thumb({ level }: { level: FrontendChapterMap }) {
   const [failed, setFailed] = useState(false);
   return (
     <span className="guide-thumb">
@@ -35,8 +30,9 @@ function Thumb({ level }: { level: Chapter1Level }) {
   );
 }
 
-// "📜 Cốt truyện & Danh sách ải": chapter intro + all 10 levels.
+// "📜 Cốt truyện & Danh sách ải": chapter intro + every level of the chapter.
 export default function ChapterGuide({
+  chapter,
   heroName,
   completedCount,
   currentLevel,
@@ -83,14 +79,17 @@ export default function ChapterGuide({
 
         <div className="guide-intro">
           <p className="guide-kicker">📜 Cốt truyện</p>
-          <h2 id="guide-title">{CHAPTER1_TITLE}</h2>
-          {CHAPTER1_STORY.map((p) => (
+          <h2 id="guide-title">{chapter.title}</h2>
+          {chapter.subtitle && <p className="guide-subtitle">{chapter.subtitle}</p>}
+          {/* Backend story; Chapter 1 falls back to the bundled story while the backend returns []. */}
+          {(chapter.story.length ? chapter.story : chapter.description ? [chapter.description] : []).map((p) => (
             <p key={p}>{p}</p>
           ))}
           <p className="guide-hero">
             <strong>{heroName}</strong>
             <span>
-              Đã hoàn thành {completedCount}/{CHAPTER1_LEVELS.length} ải
+              Đã hoàn thành {chapter.maps.filter((m) => levelStatus(m.level, completedCount) === "COMPLETED").length}/
+              {chapter.maps.length} ải
             </span>
           </p>
         </div>
@@ -98,14 +97,14 @@ export default function ChapterGuide({
         <div className="guide-levels">
           <h3>Danh sách ải</h3>
           <ol>
-            {CHAPTER1_LEVELS.map((l) => {
+            {chapter.maps.map((l) => {
               const s = levelStatus(l.level, completedCount);
               const isCurrent = l.level === currentLevel;
               return (
                 <li
                   key={l.level}
                   ref={isCurrent ? currentCard : undefined}
-                  className={`guide-card is-${s} ${isCurrent ? "is-current" : ""}`}
+                  className={`guide-card is-${s} ${isCurrent ? "is-current" : ""} ${l.isBoss ? "is-boss" : ""}`}
                 >
                   <Thumb level={l} />
                   <div className="guide-card-body">
@@ -116,8 +115,22 @@ export default function ChapterGuide({
                       </span>
                       {isCurrent && <span className="guide-viewing">Đang xem</span>}
                     </p>
-                    <h4>{l.title}</h4>
+                    <h4>
+                      {l.isBoss && <span aria-hidden>👑 </span>}
+                      {l.title}
+                    </h4>
                     <p className="guide-card-desc">{l.description}</p>
+                    <LevelMeta map={l} />
+                    {l.guideText && <p className="guide-card-note">🧭 {l.guideText}</p>}
+                    {s === "COMPLETED" && l.completionText && (
+                      <p className="guide-card-note is-done">🏁 {l.completionText}</p>
+                    )}
+                    {s !== "LOCKED" && l.hintText && (
+                      <details className="guide-hint">
+                        <summary>💡 Xem gợi ý</summary>
+                        <p>{l.hintText}</p>
+                      </details>
+                    )}
                     <div className="guide-card-actions">
                       <button type="button" className="secondary" onClick={() => onPreview(l.level)}>
                         🗺 Xem bản đồ

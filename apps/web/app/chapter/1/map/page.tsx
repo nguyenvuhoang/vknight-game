@@ -1,5 +1,4 @@
 import ChapterMap from "@/components/ChapterMap";
-import { CHAPTER1_LEVELS } from "@/lib/chapter1";
 import { isHeroId } from "@/lib/heroes";
 
 export const metadata = {
@@ -16,11 +15,8 @@ export default async function Chapter1MapPage({
   return (
     <ChapterMap
       hero={isHeroId(hero) ? hero : "sword"}
-      initialLevel={
-        Number.isInteger(n) && n >= 1 && n <= CHAPTER1_LEVELS.length
-          ? n
-          : undefined
-      }
+      // The level list comes from the API; the client lands on the nearest existing level.
+      initialLevel={Number.isInteger(n) && n >= 1 && n <= 99 ? n : undefined}
     />
   );
 }

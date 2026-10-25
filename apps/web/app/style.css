@@ -1246,6 +1246,185 @@ p.cp-state {
     animation: cp-pop .25s ease-out
 }
 
+/* Level metadata chips (type · difficulty · duration · rewards) from the API */
+.level-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 6px 0 0;
+    padding: 0;
+    list-style: none
+}
+
+.level-meta li {
+    padding: 1px 8px;
+    background: #fff;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 800;
+    white-space: nowrap
+}
+
+.level-meta.is-compact li {
+    padding: 0 7px;
+    font-size: 11.5px
+}
+
+.level-meta li.is-easy {
+    background: #e3f3d6;
+    color: #2f6b2b
+}
+
+.level-meta li.is-medium {
+    background: #ffe3a3;
+    color: #8a4b05
+}
+
+.level-meta li.is-hard {
+    background: #fbd5cf;
+    color: #9b2c1f
+}
+
+.level-meta li.is-boss {
+    background: #29251e;
+    color: #ffce67
+}
+
+/* Boss level chip wears a crown */
+.level-chip.is-boss::before {
+    content: "👑";
+    position: absolute;
+    top: -13px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 13px;
+    line-height: 1
+}
+
+.level-chips:has(.is-boss) {
+    padding-top: 12px
+}
+
+/* Compatibility-fallback notice (backend unavailable) */
+.map-notice {
+    position: absolute;
+    top: var(--scene-top);
+    left: 12px;
+    right: 12px;
+    z-index: 6;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    width: fit-content;
+    max-width: calc(100% - 24px);
+    margin: 0 auto;
+    padding: 4px 6px 4px 12px;
+    background: #fff4d6;
+    border: 2px solid #30291d;
+    border-radius: 14px;
+    box-shadow: 2px 3px #30291d;
+    font-size: 13px;
+    font-weight: 700
+}
+
+.map-notice button {
+    padding: 2px 10px;
+    border: 2px solid #30291d;
+    border-radius: 999px;
+    background: #fdbd46;
+    font-size: 12px;
+    font-weight: 800
+}
+
+/* Loading / error / empty chapter card */
+.map-state {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    right: 12px;
+    z-index: 4;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    width: min(380px, calc(100% - 24px));
+    margin: 0 auto;
+    padding: 18px;
+    transform: translateY(-50%);
+    text-align: center;
+    background: #fff4d6;
+    border: 3px solid #30291d;
+    border-radius: 16px;
+    box-shadow: 4px 5px #30291d
+}
+
+.map-state > span:first-child:not(.scene-spinner) {
+    font-size: 34px
+}
+
+/* Guide: backend subtitle, guide/completion notes, collapsible hint */
+.guide-subtitle {
+    margin: -6px 0 10px;
+    color: #7a4a1f;
+    font-style: italic;
+    font-weight: 700
+}
+
+.guide-card-note {
+    margin: 6px 0 0;
+    font-size: 13.5px;
+    line-height: 1.4
+}
+
+.guide-card-note.is-done {
+    color: #2f6b2b;
+    font-weight: 700
+}
+
+.guide-hint {
+    margin-top: 6px;
+    font-size: 13.5px
+}
+
+.guide-hint summary {
+    width: fit-content;
+    cursor: pointer;
+    color: #7a4a1f;
+    font-weight: 800
+}
+
+.guide-hint p {
+    margin: 4px 0 0;
+    padding: 6px 10px;
+    background: #fff8e0;
+    border: 2px dashed #c89a3c;
+    border-radius: 10px
+}
+
+.guide-card.is-boss {
+    border-color: #29251e;
+    background: linear-gradient(#fff, #fff4d6)
+}
+
+.guide-card .guide-card-actions {
+    margin-top: 8px
+}
+
+@media (max-width: 700px) {
+    .level-meta.is-compact {
+        gap: 4px
+    }
+
+    .level-meta.is-compact li {
+        font-size: 10.5px
+    }
+
+    .map-notice {
+        font-size: 12px
+    }
+}
+
 /* 📜 Story & level guide */
 .guide-backdrop {
     position: fixed;
@@ -2502,5 +2681,287 @@ html[data-scene-leave="back"] .scene-screen {
         width: auto;
         flex: 1;
         height: 44px
+    }
+}
+
+/* ---------- Backend-driven gameplay (components/gameplay) ---------- */
+/* NPCs and items: (left, top) is the ground contact point; the box grows up. */
+.gp-entity {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    transform: translate(-50%, -100%);
+    transform-origin: 50% 100%;
+    -webkit-tap-highlight-color: transparent
+}
+
+.gp-entity:disabled {
+    cursor: default
+}
+
+.gp-entity .sprite-svg,
+.gp-sprite-img {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: 50% 100%;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25))
+}
+
+.gp-entity:hover .sprite-svg,
+.gp-entity:focus-visible .sprite-svg,
+.gp-entity.is-near .sprite-svg,
+.gp-entity:hover .gp-sprite-img,
+.gp-entity.is-near .gp-sprite-img {
+    filter: drop-shadow(0 0 4px #ffce67) drop-shadow(0 0 2px #ffce67)
+}
+
+.gp-entity:focus-visible {
+    outline: 3px solid #30291d;
+    outline-offset: 3px;
+    border-radius: 8px
+}
+
+.gp-entity .adv-spot-label {
+    bottom: calc(100% + 4px)
+}
+
+.gp-entity:hover .adv-spot-label,
+.gp-entity:focus-visible .adv-spot-label,
+.gp-entity.is-near .adv-spot-label {
+    display: block
+}
+
+.gp-entity .adv-spot-sparkle {
+    top: -30%;
+    right: -20%
+}
+
+.gp-item-bob {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: 100%;
+    animation: gp-bob 1.8s ease-in-out infinite
+}
+
+@keyframes gp-bob {
+    50% { transform: translateY(-12%) }
+}
+
+.gp-sprite-missing {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 100%;
+    background: #fff4d6;
+    border: 2px dashed #9b2c1f;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1
+}
+
+.gp-sprite-missing small {
+    font-size: 9px;
+    font-weight: 800
+}
+
+/* Dialogue choices (conditional ones stay visible, locked with a reason) */
+.gp-choices {
+    flex-direction: column;
+    align-items: stretch
+}
+
+.gp-choice {
+    display: grid;
+    gap: 2px;
+    text-align: left
+}
+
+.gp-choice:disabled {
+    background: #ece4d2;
+    color: #8b8170;
+    cursor: not-allowed
+}
+
+.gp-choice-lock {
+    color: #9b2c1f;
+    font-size: 12px;
+    font-weight: 700
+}
+
+/* Objective tracker */
+.gp-objectives {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none
+}
+
+.gp-objective {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    gap: 6px;
+    align-items: start;
+    font-size: 14px
+}
+
+.gp-objective-icon {
+    display: grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #30291d;
+    border-radius: 50%;
+    background: #fff;
+    font-size: 11px;
+    font-weight: 900
+}
+
+.gp-objective.is-COMPLETED .gp-objective-icon {
+    background: #6fbf4a;
+    color: #fff
+}
+
+.gp-objective.is-ACTIVE .gp-objective-icon {
+    background: #fdbd46
+}
+
+.gp-objective.is-LOCKED {
+    color: #8b8170
+}
+
+.gp-objective.is-COMPLETED .gp-objective-text strong {
+    color: #6c6353;
+    text-decoration: line-through
+}
+
+.gp-objective-text {
+    display: grid
+}
+
+.gp-objective-text small {
+    color: #674c1b
+}
+
+.gp-objective-count {
+    color: #a1471f
+}
+
+.gp-dev-warning {
+    margin: 10px 0 0;
+    padding: 6px 8px;
+    background: #fbd5cf;
+    border: 2px dashed #9b2c1f;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700
+}
+
+/* Inventory */
+.gp-slot {
+    position: relative
+}
+
+.gp-slot-icon {
+    display: block;
+    width: 34px;
+    height: 22px
+}
+
+.gp-slot-qty {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    padding: 0 4px;
+    background: #29251e;
+    color: #ffce67;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 900
+}
+
+/* Interaction prompt */
+.gp-prompt {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    border: 3px solid #30291d;
+    border-radius: 12px;
+    background: #fdbd46;
+    font-weight: 800;
+    box-shadow: 3px 4px #30291d;
+    animation: adv-rise .2s ease-out
+}
+
+.gp-prompt kbd {
+    padding: 0 6px;
+    border: 2px solid #30291d;
+    border-radius: 6px;
+    background: #fff4d6;
+    font: 800 12px system-ui, sans-serif
+}
+
+.gp-dock .adv-target {
+    flex: 1 1 200px
+}
+
+.gp-toasts {
+    position: absolute;
+    top: 82px;
+    left: 12px;
+    right: 12px;
+    z-index: 30;
+    display: grid;
+    justify-items: center;
+    gap: 6px;
+    pointer-events: none
+}
+
+.gp-toast {
+    position: static
+}
+
+/* Stage loading / error card */
+.stage-state-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px
+}
+
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gp-item-bob,
+    .gp-prompt {
+        animation: none
+    }
+}
+
+@media (max-width: 700px) {
+    .gp-prompt {
+        flex: 1 1 100%;
+        justify-content: center
+    }
+
+    .gp-toasts {
+        top: 72px
     }
 }

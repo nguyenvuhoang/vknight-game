@@ -46,10 +46,11 @@ export function Granny() {
   );
 }
 
-export function Dog({ awake }: { awake: boolean }) {
+/** awake: sitting (with the bone in its mouth unless bone=false); otherwise curled up asleep. */
+export function Dog({ awake, bone = true }: { awake: boolean; bone?: boolean }) {
   return awake ? (
     <svg viewBox="0 0 120 80" className="sprite-svg" aria-hidden>
-      {/* sitting, chewing the bone */}
+      {/* sitting{bone ? ", chewing the bone" : ""} */}
       <path d="M86 58 Q106 50 104 36" fill="none" stroke={INK} strokeWidth="4" strokeLinecap="round" />
       <ellipse cx="66" cy="56" rx="26" ry="18" fill="#e8b64a" stroke={INK} strokeWidth="3.5" />
       <path d="M52 72 V78 M76 72 V78" stroke={INK} strokeWidth="4" strokeLinecap="round" />
@@ -57,6 +58,7 @@ export function Dog({ awake }: { awake: boolean }) {
       <path d="M28 22 Q18 30 24 44" fill="#c98f2c" stroke={INK} strokeWidth="3" />
       <circle cx="40" cy="31" r="2.6" fill={INK} />
       <ellipse cx="27" cy="40" rx="5" ry="3.5" fill={INK} />
+      {bone && (
       <g transform="rotate(-12 26 52)">
         <rect x="8" y="48" width="34" height="7" rx="3.5" fill="#fff4d6" stroke={INK} strokeWidth="2.5" />
         <circle cx="9" cy="48" r="4.5" fill="#fff4d6" stroke={INK} strokeWidth="2.5" />
@@ -64,6 +66,7 @@ export function Dog({ awake }: { awake: boolean }) {
         <circle cx="41" cy="48" r="4.5" fill="#fff4d6" stroke={INK} strokeWidth="2.5" />
         <circle cx="41" cy="56" r="4.5" fill="#fff4d6" stroke={INK} strokeWidth="2.5" />
       </g>
+      )}
     </svg>
   ) : (
     <svg viewBox="0 0 120 80" className="sprite-svg" aria-hidden>
