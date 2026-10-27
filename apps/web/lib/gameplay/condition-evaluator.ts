@@ -15,6 +15,8 @@ export function evaluate(cond: Condition | null, s: GameplayState): boolean {
       return s.reached.includes(cond.dialogue_code);
     case "DIALOGUE_CHOICE":
       return s.choices.includes(cond.choice_id);
+    case "INTERACT":
+      return (s.interacted ?? []).includes(cond.target_code);
     case "ALL":
       return cond.conditions.every((c) => evaluate(c, s));
     default:
@@ -36,16 +38,23 @@ export function progress(cond: Condition | null, s: GameplayState): { done: numb
 }
 
 /** Human-readable requirement for a disabled choice (item names resolved by caller). */
-export function describeMissing(cond: Condition | null, s: GameplayState, itemName: (code: string) => string): string | null {
+export function describeMissing(
+  cond: Condition | null,
+  s: GameplayState,
+  itemName: (code: string) => string,
+  objectiveTitle: (code: string) => string | null = () => null,
+): string | null {
   if (!cond || evaluate(cond, s)) return null;
   switch (cond.type) {
     case "HAS_ITEM":
     case "ITEM_COLLECTED":
       return `Cần ${cond.quantity > 1 ? `${cond.quantity} × ` : ""}${itemName(cond.item_code)}`;
-    case "OBJECTIVE_COMPLETED":
-      return "Cần hoàn thành nhiệm vụ trước";
+    case "OBJECTIVE_COMPLETED": {
+      const title = objectiveTitle(cond.objective_code);
+      return title ? `Cần xong: ${title}` : "Cần hoàn thành nhiệm vụ trước";
+    }
     case "ALL":
-      return cond.conditions.map((c) => describeMissing(c, s, itemName)).find(Boolean) ?? null;
+      return cond.conditions.map((c) => describeMissing(c, s, itemName, objectiveTitle)).find(Boolean) ?? null;
     default:
       return "Chưa đủ điều kiện";
   }

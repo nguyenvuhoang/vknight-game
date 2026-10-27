@@ -47,9 +47,10 @@ export type ChoiceView = DialogueChoice & { enabled: boolean; reason: string | n
 /** Choices as shown: conditional ones stay visible but are not executable. */
 export function viewChoices(g: MapGameplay, s: GameplayState, node: DialogueNode): ChoiceView[] {
   const itemName = (code: string) => g.items.find((i) => i.code === code)?.name ?? code;
+  const objectiveTitle = (code: string) => g.objectives.find((o) => o.code === code)?.title ?? null;
   return node.choices.map((c) => {
     const done = c.actions.length > 0 && s.applied.includes(`choice:${c.id}`);
-    const missing = describeMissing(c.condition, s, itemName);
+    const missing = describeMissing(c.condition, s, itemName, objectiveTitle);
     return { ...c, enabled: !done && !missing, reason: done ? "Đã làm rồi" : missing };
   });
 }

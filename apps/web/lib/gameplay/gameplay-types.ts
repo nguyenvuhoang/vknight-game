@@ -83,6 +83,8 @@ export type Condition =
   | { type: "DIALOGUE_CHOICE"; choice_id: string }
   | { type: "HAS_ITEM"; item_code: string; quantity: number }
   | { type: "ALL"; conditions: Condition[] }
+  /** The hero interacted with a target (exit spawn code, NPC code or NPC spawn code). */
+  | { type: "INTERACT"; target_code: string }
   /** Unparseable / unsupported condition: never satisfied (fail closed). */
   | { type: "INVALID"; reason: string };
 
@@ -159,10 +161,24 @@ export type DialogueNode = {
   ending: boolean;
 };
 
+/** Exit point from the map's gameplay_config (WF_BO_GET_CHAPTER_MAP). */
+export type GameplayExit = {
+  spawnCode: string;
+  /** Feet position, 0–100 of the scene. */
+  x: number;
+  y: number;
+  unlockCondition: Condition | null;
+};
+
+/** Parsed ChapterMap.gameplay_config. */
+export type MapGameplayConfig = { exits: GameplayExit[] };
+
 export type MapGameplay = {
   mapCode: string;
   npcs: GameplayNpc[];
   items: GameplayItem[];
+  /** From the map's gameplay_config; empty when the map has none. */
+  exits: GameplayExit[];
   /** Sorted by display_order. */
   objectives: GameplayObjective[];
   /** In backend order (the first root node whose trigger passes starts a conversation). */
@@ -198,6 +214,8 @@ export type GameplayState = {
   choices: string[];
   /** Idempotency keys of action batches already applied. */
   applied: string[];
+  /** Interaction targets used (exit spawn codes, NPC codes/spawn codes). */
+  interacted: string[];
 };
 
 export type EngineResult = { ok: true; state: GameplayState } | { ok: false; state: GameplayState; error: string };
@@ -210,4 +228,5 @@ export const emptyGameplayState = (): GameplayState => ({
   reached: [],
   choices: [],
   applied: [],
+  interacted: [],
 });

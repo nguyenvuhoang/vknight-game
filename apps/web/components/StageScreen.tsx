@@ -58,18 +58,20 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
       syncProgress(getGuestId(), hero, level);
     }
   };
+  // Which renderer this level uses; exposed on the root for debugging stale bundles.
+  const mode = scene && !offline ? "backend" : adventure ? "adventure" : "classic";
   const toMap = () => goToScene(router, mapHref(hero, level), "back");
   const toNext = () =>
     level < total ? goToScene(router, playHref(hero, level + 1), "forward") : toMap();
 
   return (
-    <div ref={root} className="stage-screen scene-screen">
+    <div ref={root} className="stage-screen scene-screen" data-stage-mode={mode} data-map-code={mapCode}>
       {error && <p className="toast">{error}</p>}
       {!allowed || !current ? (
         <p className="stage-loading" role="status">
           <span className="scene-spinner" aria-hidden /> Đang vào Ải {level}…
         </p>
-      ) : scene && !offline ? (
+      ) : mode === "backend" && scene ? (
         <BackendStage
           mapCode={mapCode}
           scene={scene}
@@ -83,7 +85,7 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
           onNext={toNext}
           onMap={toMap}
         />
-      ) : adventure ? (
+      ) : mode === "adventure" && adventure ? (
         <AdventureStage
           config={adventure}
           hero={hero}
@@ -189,6 +191,8 @@ function BackendStage({ mapCode, scene, hero, level, total, fallbackTitle, canPl
       total={total}
       title={map?.title ?? fallbackTitle}
       completionText={map?.completionText ?? null}
+      guideText={map?.guideText ?? null}
+      hintText={map?.hintText ?? null}
       onWin={onWin}
       onNext={onNext}
       onMap={onMap}

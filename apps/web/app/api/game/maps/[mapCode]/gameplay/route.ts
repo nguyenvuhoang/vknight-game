@@ -1,12 +1,14 @@
 // GET /api/game/maps/[mapCode]/gameplay — BFF for a map's gameplay config.
-// Browser -> this route -> O24OpenAPI gateway (WF_BO_GET_MAP_GAMEPLAY).
+// Browser -> this route -> O24OpenAPI gateway (WF_BO_GET_MAP_GAMEPLAY), plus the
+// map's exits from ChapterMap.gameplay_config (WF_BO_GET_CHAPTER_MAP, shared cache).
 // Only the map code comes from the request (validated); workflow, fields and
 // headers are fixed server-side; credentials never leave the server.
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { NextResponse } from "next/server";
-import { adaptGameplay } from "@/lib/gameplay/gameplay-adapter";
+import { adaptGameplay, parseMapConfig, unresolvedInteractTargets } from "@/lib/gameplay/gameplay-adapter";
 import type { MapGameplayError, MapGameplayResponse } from "@/lib/gameplay/gameplay-types";
+import { chapterNumberOf, loadChapter } from "@/lib/server/chapter-source";
 import { callWorkflow, GatewayError, WORKFLOWS } from "@/lib/server/o24-gateway";
 
 export const dynamic = "force-dynamic";
@@ -36,6 +38,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ mapCode
   const hit = cache.get(mapCode);
   if (hit && Date.now() - hit.at < TTL_MS) return NextResponse.json(hit.body, { headers: OK_HEADERS });
 
+  // Exits live in the chapter's map config; load it in parallel (shared cache).
+  const chapterNo = chapterNumberOf(mapCode);
+  const chapterLoad = chapterNo ? loadChapter(chapterNo) : Promise.resolve(null);
+
   let data: unknown;
   try {
     let p = inflight.get(mapCode);
@@ -52,14 +58,28 @@ export async function GET(_req: Request, { params }: { params: Promise<{ mapCode
     return fail(502, "unavailable", "Không tải được dữ liệu màn chơi từ máy chủ. Thử lại sau nhé!");
   }
 
-  const result = adaptGameplay(data, mapCode, assetExists);
+  const chapter = await chapterLoad;
+  const configWarnings: string[] = [];
+  const config = chapter?.ok
+    ? parseMapConfig(chapter.mapConfigs[mapCode] ?? null, (m) => configWarnings.push(m), `${mapCode}.gameplay_config`)
+    : { exits: [] };
+
+  const result = adaptGameplay(data, mapCode, assetExists, config);
   if (!result.ok) {
     console.warn(`[api/game/maps/${mapCode}/gameplay] ${result.code}: ${result.reason}`);
     if (result.code === "not_found") return fail(404, "not_found", "Màn chơi này chưa có dữ liệu.");
     return fail(502, "unavailable", "Dữ liệu màn chơi từ máy chủ không hợp lệ.");
   }
-  if (result.warnings.length) console.warn(`[api/game/maps/${mapCode}/gameplay] warnings:`, result.warnings);
-  const body: MapGameplayResponse = { gameplay: result.gameplay, warnings: result.warnings };
+  // Map config unavailable but an objective needs an exit: fail (retryable, not cached)
+  // rather than serve a stage that can never be completed.
+  const unresolved = unresolvedInteractTargets(result.gameplay);
+  if (!chapter?.ok && unresolved.length) {
+    console.error(`[api/game/maps/${mapCode}/gameplay] map config unavailable; unresolved INTERACT targets:`, unresolved);
+    return fail(502, "unavailable", "Không tải được cấu hình lối ra của màn chơi. Thử lại sau nhé!");
+  }
+  const warnings = [...configWarnings, ...result.warnings];
+  if (warnings.length) console.warn(`[api/game/maps/${mapCode}/gameplay] warnings:`, warnings);
+  const body: MapGameplayResponse = { gameplay: result.gameplay, warnings };
   if (cache.size >= MAX_CACHE) cache.delete(cache.keys().next().value!);
   cache.set(mapCode, { at: Date.now(), body });
   return NextResponse.json(body, { headers: OK_HEADERS });

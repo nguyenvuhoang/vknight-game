@@ -2965,3 +2965,207 @@ html[data-scene-leave="back"] .scene-screen {
         top: 72px
     }
 }
+
+/* Exit gate (ChapterMap.gameplay_config exit) */
+.gp-exit .gp-gate-svg {
+    overflow: visible
+}
+
+.gp-exit.is-LOCKED .gp-gate-svg {
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25)) saturate(.75) brightness(.92)
+}
+
+.gp-gate-door {
+    transform-box: fill-box;
+    transition: transform .9s cubic-bezier(.3, 1.3, .5, 1)
+}
+
+.gp-gate-left {
+    transform-origin: 0% 50%
+}
+
+.gp-gate-right {
+    transform-origin: 100% 50%
+}
+
+/* Doors swing outward when the gate unlocks */
+.gp-gate-svg.is-open .gp-gate-left {
+    transform: scaleX(.18) skewY(-6deg)
+}
+
+.gp-gate-svg.is-open .gp-gate-right {
+    transform: scaleX(.18) skewY(6deg)
+}
+
+.gp-exit.is-OPEN .gp-gate-svg {
+    animation: gp-gate-glow 1.6s ease-in-out infinite
+}
+
+@keyframes gp-gate-glow {
+    50% { filter: drop-shadow(0 0 6px #ffce67) drop-shadow(0 0 2px #ffce67) }
+}
+
+/* Hotspot around an NPC painted into the backdrop */
+.gp-painted-npc {
+    z-index: 2000
+}
+
+/* Hotspot around an item painted into the backdrop: just above it, under every actor */
+.gp-painted-item {
+    z-index: 2;
+    border-radius: 10px
+}
+
+/* Sprite mirrored to face the other way (scene SpriteArt.flip) */
+.gp-npc.is-flipped .gp-sprite-frame {
+    transform: scaleX(-1)
+}
+
+/* Backend sprite shown through a frame (e.g. a caption baked under the figure) */
+.gp-sprite-frame {
+    position: relative;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 100%;
+    overflow: hidden;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .25))
+}
+
+.gp-sprite-frame img {
+    position: absolute;
+    max-width: none;
+    height: auto;
+    user-select: none
+}
+
+.gp-entity:hover .gp-sprite-frame,
+.gp-entity.is-near .gp-sprite-frame {
+    filter: drop-shadow(0 0 4px #ffce67) drop-shadow(0 0 2px #ffce67)
+}
+
+/* Flat item lying on the ground: foreshortened from its contact edge */
+.gp-item.is-lying .gp-sprite-frame {
+    transform: perspective(260px) rotateX(58deg) rotate(-12deg);
+    transform-origin: 50% 100%
+}
+
+.gp-item.is-lying .adv-spot-sparkle {
+    top: 38%;
+    right: -8%
+}
+
+.gp-item.is-lying .adv-shadow {
+    width: 90%;
+    height: 22%;
+    transform: translate(-50%, 30%)
+}
+
+/* Exit over a painted gate: sits just above the backdrop, under every actor */
+.gp-painted-exit {
+    z-index: 2;
+    border-radius: 8px 8px 2px 2px
+}
+
+/* Open gate: the doorway is masked (no painted doors behind the gap), then the leaves */
+.gp-doorway {
+    position: absolute;
+    inset: 0;
+    pointer-events: none
+}
+
+.gp-doorway-light {
+    position: absolute;
+    inset: 0;
+    background:
+        radial-gradient(ellipse 55% 50% at 50% 64%, rgba(255, 251, 226, .95), rgba(255, 251, 226, 0) 72%),
+        linear-gradient(180deg, #9cbd84 0%, #cfe0a6 46%, #e8d79c 72%, #dcb873 100%);
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 12%);
+    mask-image: linear-gradient(180deg, transparent 0, #000 12%);
+    animation: gp-doorway-in .6s ease-out both
+}
+
+.gp-doorway-leaf {
+    position: absolute;
+    bottom: 0;
+    background-repeat: no-repeat;
+    filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .3));
+    animation: gp-leaf-open .9s cubic-bezier(.3, 1.3, .5, 1) both
+}
+
+.gp-doorway-leaf.is-left {
+    left: 0;
+    transform-origin: 0 100%
+}
+
+.gp-doorway-leaf.is-right {
+    right: 0;
+    transform-origin: 100% 100%
+}
+
+@keyframes gp-doorway-in {
+    from { opacity: 0 }
+}
+
+@keyframes gp-leaf-open {
+    from { transform: scaleX(1.22) }
+}
+
+/* Marker art over the world (quest giver, open exit, clue sparkle) */
+.gp-world-marker {
+    position: absolute;
+    left: 50%;
+    bottom: 100%;
+    width: 30%;
+    min-width: 26px;
+    max-width: 52px;
+    height: auto;
+    margin-bottom: 2px;
+    transform: translateX(-50%);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .45));
+    pointer-events: none;
+    animation: gp-bob 1.8s ease-in-out infinite
+}
+
+.gp-world-marker.is-exit {
+    bottom: auto;
+    top: 6%;
+    width: 18%
+}
+
+.gp-entity:hover .gp-world-marker,
+.gp-entity.is-near .gp-world-marker {
+    opacity: 0
+}
+
+.gp-sparkle-img {
+    width: 48%;
+    min-width: 16px;
+    max-width: 34px;
+    height: auto;
+    pointer-events: none;
+    animation: gp-twinkle 1.6s ease-in-out infinite
+}
+
+@keyframes gp-twinkle {
+    50% { transform: scale(.75) rotate(12deg); opacity: .7 }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gp-doorway-light,
+    .gp-doorway-leaf,
+    .gp-world-marker,
+    .gp-sparkle-img {
+        animation: none
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gp-gate-door {
+        transition: none
+    }
+
+    .gp-exit.is-OPEN .gp-gate-svg {
+        animation: none
+    }
+}

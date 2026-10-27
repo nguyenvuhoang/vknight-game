@@ -9,10 +9,12 @@ import type {
   Condition,
   DialogueChoice,
   DialogueNode,
+  GameplayExit,
   GameplayItem,
   GameplayNpc,
   GameplayObjective,
   MapGameplay,
+  MapGameplayConfig,
 } from "./gameplay-types";
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -53,6 +55,8 @@ export function parseCondition(raw: unknown, warn: (m: string) => void = () => {
       return isStr(v.dialogue_code) ? { type: v.type, dialogue_code: v.dialogue_code } : bad("missing dialogue_code");
     case "DIALOGUE_CHOICE":
       return isStr(v.choice_id) ? { type: v.type, choice_id: v.choice_id } : bad("missing choice_id");
+    case "INTERACT":
+      return isStr(v.target_code) ? { type: v.type, target_code: v.target_code } : bad("missing target_code");
     case "ALL": {
       if (!Array.isArray(v.conditions) || !v.conditions.length) return bad("ALL needs conditions[]");
       return {
@@ -111,6 +115,46 @@ function parseChoices(raw: unknown, warn: (m: string) => void, where: string): D
   return out;
 }
 
+/**
+ * Parse ChapterMap.gameplay_config (JSON string). Supports {"exit":{…}} and
+ * {"exits":[…]}; invalid entries are dropped with a warning.
+ */
+export function parseMapConfig(raw: unknown, warn: (m: string) => void = () => {}, where = "gameplay_config"): MapGameplayConfig {
+  const v = decode(raw, warn, where);
+  if (v == null) return { exits: [] };
+  if (!isObj(v)) {
+    warn(`${where}: not an object`);
+    return { exits: [] };
+  }
+  const list = Array.isArray(v.exits) ? v.exits : v.exit != null ? [v.exit] : [];
+  const exits: GameplayExit[] = [];
+  list.forEach((e, i) => {
+    const at = `${where}.exit${list.length > 1 ? `[${i}]` : ""}`;
+    const x = isObj(e) ? pct(e.position_x) : null, y = isObj(e) ? pct(e.position_y) : null;
+    if (!isObj(e) || !isStr(e.spawn_code) || x == null || y == null) {
+      warn(`${at}: missing spawn_code/position — skipped`);
+      return;
+    }
+    exits.push({ spawnCode: e.spawn_code, x, y, unlockCondition: parseCondition(e.unlock_condition ?? null, warn, `${at}.unlock_condition`) });
+  });
+  return { exits };
+}
+
+/** INTERACT targets used by objectives that no NPC/exit provides (stage would be unwinnable). */
+export function unresolvedInteractTargets(g: MapGameplay): string[] {
+  const have = new Set([...g.exits.map((e) => e.spawnCode), ...g.npcs.flatMap((n) => [n.code, n.spawnCode])]);
+  const out = new Set<string>();
+  const visit = (c: Condition | null) => {
+    if (c?.type === "INTERACT" && !have.has(c.target_code)) out.add(c.target_code);
+    if (c?.type === "ALL") c.conditions.forEach(visit);
+  };
+  for (const o of g.objectives) {
+    visit(o.unlockCondition);
+    visit(o.completionCondition);
+  }
+  return [...out];
+}
+
 export type AdaptGameplayResult =
   | { ok: true; gameplay: MapGameplay; warnings: string[] }
   | { ok: false; code: "not_found" | "format"; reason: string };
@@ -120,6 +164,7 @@ export function adaptGameplay(
   data: unknown,
   requestedMapCode: string,
   assetExists: (url: string) => boolean = () => true,
+  config: MapGameplayConfig = { exits: [] },
 ): AdaptGameplayResult {
   if (!isObj(data) || !("gameplay" in data)) return { ok: false, code: "format", reason: "missing data.gameplay" };
   const g = data.gameplay;
@@ -244,5 +289,18 @@ export function adaptGameplay(
     }
   }
 
-  return { ok: true, gameplay: { mapCode: requestedMapCode, npcs, items, objectives, dialogues }, warnings };
+  // INTERACT targets must resolve to an exit or NPC, or the objective can never complete.
+  const exits = config.exits;
+  const targets = new Set([...exits.map((e) => e.spawnCode), ...npcs.flatMap((n) => [n.code, n.spawnCode])]);
+  const visit = (c: Condition | null, at: string) => {
+    if (!c) return;
+    if (c.type === "INTERACT" && !targets.has(c.target_code)) warn(`${at}: INTERACT target ${c.target_code} is not configured (no exit/NPC)`);
+    if (c.type === "ALL") c.conditions.forEach((x) => visit(x, at));
+  };
+  for (const o of objectives) {
+    visit(o.unlockCondition, `objective ${o.code}.unlock_condition`);
+    visit(o.completionCondition, `objective ${o.code}.completion_condition`);
+  }
+
+  return { ok: true, gameplay: { mapCode: requestedMapCode, npcs, items, exits, objectives, dialogues }, warnings };
 }

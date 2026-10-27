@@ -8,8 +8,11 @@ export function objectiveStatus(o: GameplayObjective, s: GameplayState): Objecti
   return evaluate(o.unlockCondition, s) ? "ACTIVE" : "LOCKED";
 }
 
-export const objectiveProgress = (o: GameplayObjective, s: GameplayState) =>
-  s.completed.includes(o.code) ? { done: 1, total: 1, complete: true } : { ...progress(o.completionCondition, s), complete: false };
+/** Progress toward completion; a completed objective reports its full total (e.g. 3/3). */
+export function objectiveProgress(o: GameplayObjective, s: GameplayState) {
+  const p = progress(o.completionCondition, s);
+  return s.completed.includes(o.code) ? { done: p.total, total: p.total, complete: true } : { ...p, complete: false };
+}
 
 /**
  * Complete every objective whose unlock prerequisites and completion condition

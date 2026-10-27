@@ -18,7 +18,7 @@ export default function ObjectiveTracker({ objectives, state }: { objectives: Ga
             <span className="gp-objective-text">
               <strong>
                 {o.title}
-                {status === "ACTIVE" && p.total > 1 && (
+                {status !== "LOCKED" && p.total > 1 && (
                   <span className="gp-objective-count">
                     {" "}
                     ({p.done}/{p.total})

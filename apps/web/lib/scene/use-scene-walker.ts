@@ -231,6 +231,8 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
 
   return {
     sceneRef, worldRef, playerRef, hudRef, dockRef,
+    /** Live hero position (% of world), for read-only HUD views like the minimap. */
+    posRef: pos,
     near, depthAt, clampWalk, distanceTo, walkTo, cancelWalk, onWorldClick, hold,
   };
 }

@@ -1,0 +1,1494 @@
+/* Fantasy MMORPG HUD (components/gameplay/hud). Every selector is scoped
+   under .fh / .gp-fantasy so the homepage, chapter map and Stage 1 are
+   untouched. */
+
+.gp-fantasy {
+    --fh-wood-hi: #7a5129;
+    --fh-wood: #573618;
+    --fh-wood-lo: #36200d;
+    --fh-edge: #1e1107;
+    --fh-gold: #e2b04c;
+    --fh-gold-hi: #f8dc8a;
+    --fh-gold-lo: #8f5e17;
+    --fh-parch: #f3e3b9;
+    --fh-parch-lo: #e0c68c;
+    --fh-ink: #3a2814;
+    --fh-cream: #fdf0cf;
+}
+
+.fh {
+    position: absolute;
+    inset: 0;
+    z-index: 18;
+    pointer-events: none;
+    font-family: var(--fh-font), "Segoe UI", system-ui, sans-serif;
+    color: var(--fh-cream)
+}
+
+.fh > *,
+.fh-top > *,
+.fh-bottom > * {
+    pointer-events: auto
+}
+
+.fh button {
+    font: inherit;
+    cursor: pointer
+}
+
+/* ---------- shared surfaces ---------- */
+.fh-frame {
+    position: relative;
+    background:
+        repeating-linear-gradient(92deg, rgba(0, 0, 0, .07) 0 2px, transparent 2px 9px, rgba(255, 220, 160, .04) 9px 11px, transparent 11px 23px),
+        linear-gradient(180deg, var(--fh-wood-hi) 0%, var(--fh-wood) 45%, var(--fh-wood-lo) 100%);
+    border: 2px solid var(--fh-edge);
+    border-radius: 14px;
+    box-shadow:
+        inset 0 0 0 2px var(--fh-gold),
+        inset 0 0 0 3px var(--fh-gold-lo),
+        inset 0 0 0 5px rgba(30, 17, 7, .55),
+        inset 0 10px 14px -8px rgba(255, 226, 160, .35),
+        0 3px 0 var(--fh-edge),
+        0 8px 18px rgba(0, 0, 0, .45)
+}
+
+/* Gold studs on the four corners */
+.fh-frame::before {
+    --stud: radial-gradient(circle, var(--fh-gold-hi) 0 2.6px, var(--fh-gold-lo) 3.2px 4.4px, transparent 5px);
+    content: "";
+    position: absolute;
+    inset: -3px;
+    pointer-events: none;
+    background:
+        var(--stud) 0 0 / 12px 12px no-repeat,
+        var(--stud) 100% 0 / 12px 12px no-repeat,
+        var(--stud) 0 100% / 12px 12px no-repeat,
+        var(--stud) 100% 100% / 12px 12px no-repeat
+}
+
+.fh-parch {
+    color: var(--fh-ink);
+    background:
+        radial-gradient(ellipse at 18% 12%, rgba(255, 250, 230, .9), transparent 55%),
+        radial-gradient(ellipse at 85% 95%, rgba(196, 160, 96, .45), transparent 60%),
+        radial-gradient(circle at 70% 30%, rgba(160, 120, 60, .08) 0 2px, transparent 3px) 0 0 / 23px 19px,
+        var(--fh-parch);
+    border: 2px solid #8a6230;
+    box-shadow: inset 0 0 18px rgba(120, 80, 30, .35)
+}
+
+.fh-btn {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 7px 10px;
+    color: var(--fh-cream);
+    font-weight: 700;
+    background: linear-gradient(180deg, #8a5a2b, #5b3517);
+    border: 2px solid var(--fh-edge);
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 1.5px var(--fh-gold), 0 2px 0 var(--fh-edge)
+}
+
+.fh-btn:hover {
+    filter: brightness(1.12)
+}
+
+.fh :focus-visible {
+    outline: 3px solid #fff2b0;
+    outline-offset: 2px
+}
+
+/* ---------- top row ---------- */
+.fh-top {
+    position: absolute;
+    top: 10px;
+    left: 12px;
+    right: 12px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: start;
+    gap: 12px;
+    pointer-events: none
+}
+
+/* Character */
+.fh-char {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-self: start;
+    padding-left: 34px
+}
+
+.fh-avatar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    z-index: 2;
+    width: 82px;
+    height: 82px;
+    overflow: hidden;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 35%, #fff6dc, var(--tint, #cfe3b5) 70%);
+    border: 3px solid var(--fh-edge);
+    box-shadow: 0 0 0 3px var(--fh-gold), 0 0 0 5px var(--fh-gold-lo), 0 6px 12px rgba(0, 0, 0, .5)
+}
+
+.fh-avatar img {
+    position: absolute;
+    left: 50%;
+    top: 4%;
+    width: 210%;
+    max-width: none;
+    transform: translateX(-50%);
+    user-select: none
+}
+
+.fh-char-panel {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+    width: 230px;
+    margin-top: 8px;
+    padding: 8px 14px 9px 58px
+}
+
+.fh-char-name {
+    font-size: 18px;
+    font-weight: 800;
+    line-height: 1.05;
+    color: #fff3d0;
+    text-shadow: 0 2px 0 var(--fh-edge), 0 0 6px rgba(0, 0, 0, .5);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.fh-char-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #e9cf96;
+    line-height: 1.1
+}
+
+.fh-bar {
+    position: relative;
+    height: 17px;
+    overflow: hidden;
+    border: 2px solid var(--fh-edge);
+    border-radius: 9px;
+    background: #2a160b;
+    box-shadow: inset 0 2px 3px rgba(0, 0, 0, .6)
+}
+
+.fh-bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 7px;
+    background: linear-gradient(180deg, #ff8a7a 0%, #e0322a 45%, #a3150f 100%);
+    box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35)
+}
+
+.fh-bar-text {
+    position: relative;
+    display: block;
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 13px;
+    text-align: center;
+    color: #fff;
+    text-shadow: 0 1px 0 #000, 0 0 3px #000
+}
+
+.fh-companions {
+    display: flex;
+    gap: 6px;
+    margin: 12px 0 0 8px;
+    padding: 6px;
+    list-style: none
+}
+
+.fh-companions li {
+    width: 46px;
+    height: 46px;
+    padding: 4px;
+    border-radius: 10px;
+    background: radial-gradient(circle at 50% 30%, #fff1cc, #d9b56d);
+    border: 2px solid var(--fh-edge);
+    box-shadow: inset 0 0 0 1.5px var(--fh-gold);
+    filter: grayscale(.85) brightness(.85);
+    transition: filter .3s
+}
+
+.fh-companions li.is-met {
+    filter: none
+}
+
+.fh-companions li > * {
+    width: 100%;
+    height: 100%
+}
+
+.fh-companions li > .gp-sprite-frame {
+    height: auto;
+    margin-top: 8%
+}
+
+/* Banner */
+.fh-banner {
+    position: relative;
+    justify-self: center;
+    width: min(480px, 40vw);
+    padding: 0 26px
+}
+
+.fh-banner-plate {
+    padding: 8px 18px 9px;
+    text-align: center;
+    border-radius: 18px 18px 22px 22px
+}
+
+.fh-banner-title {
+    margin: 0;
+    font-size: 23px;
+    font-weight: 800;
+    line-height: 1.15;
+    color: #fff1c9;
+    text-shadow: 0 2px 0 var(--fh-edge), 0 0 8px rgba(0, 0, 0, .55);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.fh-banner-sub {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 5px auto 0;
+    padding: 3px 14px;
+    width: fit-content;
+    max-width: 100%;
+    font-size: 14px;
+    font-weight: 600;
+    color: #fbe9c0;
+    background: linear-gradient(180deg, #2c180a, #43280f);
+    border: 1.5px solid var(--fh-gold-lo);
+    border-radius: 999px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, .6)
+}
+
+.fh-banner-sub span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis
+}
+
+.fh-banner-sub svg {
+    flex: none
+}
+
+.fh-banner-leaf {
+    position: absolute;
+    top: 14px;
+    width: 64px;
+    height: 40px;
+    z-index: -1;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .4))
+}
+
+.fh-banner-leaf.is-left {
+    left: -12px;
+    transform: rotate(-8deg)
+}
+
+.fh-banner-leaf.is-right {
+    right: -12px
+}
+
+/* Minimap */
+.fh-minimap {
+    justify-self: end;
+    width: 232px;
+    padding: 6px 8px 8px
+}
+
+.fh-minimap-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 1px 4px 5px;
+    font-size: 15px;
+    color: #fff1c9;
+    text-shadow: 0 2px 0 var(--fh-edge)
+}
+
+.fh-minimap-head strong {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis
+}
+
+.fh-minimap-body {
+    display: flex;
+    gap: 6px
+}
+
+.fh-minimap-view {
+    position: relative;
+    flex: 1;
+    overflow: hidden;
+    border: 2px solid var(--fh-edge);
+    border-radius: 8px;
+    box-shadow: 0 0 0 1.5px var(--fh-gold), inset 0 0 12px rgba(0, 0, 0, .5);
+    background: #4d6b33
+}
+
+.fh-minimap-inner {
+    position: absolute;
+    inset: 0;
+    transform-origin: 0 0
+}
+
+.fh-minimap-inner img {
+    position: absolute;
+    height: auto;
+    max-width: none;
+    user-select: none;
+    pointer-events: none
+}
+
+.fh-mark {
+    position: absolute;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    border: 1.5px solid #1e1107;
+    transform: translate(-50%, -50%) scale(calc(1 / var(--z, 1)))
+}
+
+.fh-mark.is-npc {
+    width: 11px;
+    height: 11px;
+    background: #ffcf3f
+}
+
+.fh-mark.is-item {
+    width: 7px;
+    height: 7px;
+    background: #fff6c8;
+    box-shadow: 0 0 5px 1px #fff1a0
+}
+
+.fh-mark.is-exit-locked,
+.fh-mark.is-exit-open {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    background: #c43d2b
+}
+
+.fh-mark.is-exit-open {
+    background: #43c04a;
+    box-shadow: 0 0 6px 2px #b6ff9a
+}
+
+.fh-mark.is-hero {
+    z-index: 2;
+    width: 13px;
+    height: 13px;
+    background: radial-gradient(circle at 40% 35%, #c9ecff, #2b8ae8 60%);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1.5px #0d3c74, 0 0 8px 2px rgba(80, 180, 255, .8)
+}
+
+.fh-minimap-zoom {
+    display: grid;
+    align-content: start;
+    gap: 6px
+}
+
+.fh-minimap-zoom button {
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    font-size: 19px;
+    font-weight: 800;
+    line-height: 1;
+    color: #fff1c9;
+    background: radial-gradient(circle at 50% 35%, #8a5a2b, #3d230e);
+    border: 2px solid var(--fh-edge);
+    border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px var(--fh-gold)
+}
+
+.fh-minimap-zoom button:disabled {
+    opacity: .45;
+    cursor: default
+}
+
+/* ---------- quest tracker ---------- */
+.fh-quest {
+    position: absolute;
+    top: 222px;
+    right: 12px;
+    width: 296px;
+    max-height: calc(100% - 222px - 150px);
+    display: flex;
+    flex-direction: column
+}
+
+.fh-quest-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 7px 12px;
+    color: #fff1c9;
+    text-align: left;
+    text-shadow: 0 2px 0 var(--fh-edge)
+}
+
+.fh-quest-head strong {
+    flex: 1;
+    font-size: 19px
+}
+
+.fh-quest-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: #e9cf96
+}
+
+.fh-chevron {
+    display: grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    font-size: 11px;
+    border-radius: 6px;
+    background: #2c180a;
+    border: 1.5px solid var(--fh-gold-lo);
+    transform: rotate(180deg);
+    transition: transform .2s
+}
+
+.fh-quest.is-open .fh-chevron {
+    transform: none
+}
+
+.fh-quest-list {
+    margin: -4px 6px 0;
+    padding: 8px 10px 6px;
+    overflow: auto;
+    list-style: none;
+    border-radius: 0 0 12px 12px
+}
+
+.fh-q {
+    display: flex;
+    gap: 9px;
+    padding: 7px 6px;
+    border-bottom: 1px solid rgba(138, 98, 48, .35)
+}
+
+.fh-q:last-child {
+    border-bottom: 0
+}
+
+.fh-q.is-ACTIVE {
+    margin: 0 -4px;
+    padding-inline: 10px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, rgba(255, 207, 63, .35), rgba(255, 207, 63, .08));
+    box-shadow: inset 0 0 0 1px rgba(160, 110, 20, .35)
+}
+
+.fh-badge {
+    flex: none;
+    width: 24px;
+    height: 24px;
+    margin-top: 1px
+}
+
+.fh-badge.is-active {
+    animation: fh-pulse 1.6s ease-in-out infinite
+}
+
+@keyframes fh-pulse {
+    50% {
+        transform: scale(1.12)
+    }
+}
+
+.fh-q-text {
+    display: grid;
+    gap: 3px;
+    min-width: 0
+}
+
+.fh-q-text strong {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.2
+}
+
+.fh-q.is-LOCKED .fh-q-text strong {
+    color: #6d5d47;
+    font-weight: 600
+}
+
+.fh-q.is-COMPLETED .fh-q-text strong {
+    color: #2f5b20
+}
+
+.fh-q-count {
+    color: #9a5b00
+}
+
+.fh-q-text small {
+    font-size: 12.5px;
+    line-height: 1.25;
+    color: #5d4a30
+}
+
+.fh-q-steps {
+    display: grid;
+    gap: 3px;
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+    font-size: 13px;
+    color: #5d4a30
+}
+
+.fh-q-steps li {
+    display: flex;
+    align-items: center;
+    gap: 6px
+}
+
+.fh-q-steps li.is-done {
+    color: #2f5b20
+}
+
+.fh-subcheck {
+    flex: none;
+    width: 15px;
+    height: 15px
+}
+
+/* ---------- bottom row ---------- */
+.fh-bottom {
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 360px) minmax(0, 1fr) auto;
+    grid-template-areas: "log center menu";
+    align-items: end;
+    gap: 12px;
+    pointer-events: none
+}
+
+.fh-bottom > .adv-dpad {
+    display: none
+}
+
+/* Activity log */
+.fh-log {
+    grid-area: log;
+    display: flex;
+    flex-direction: column;
+    height: 158px;
+    padding: 6px 8px 8px;
+    background:
+        linear-gradient(180deg, rgba(54, 32, 13, .92), rgba(28, 16, 6, .88));
+    backdrop-filter: blur(2px)
+}
+
+.fh-log-tabs {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 5px;
+    overflow-x: auto;
+    scrollbar-width: none
+}
+
+.fh-log-tabs button {
+    flex: none;
+    padding: 2px 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #e9cf96;
+    background: linear-gradient(180deg, #4b2d12, #2c180a);
+    border: 1.5px solid #6b4520;
+    border-radius: 7px 7px 3px 3px
+}
+
+.fh-log-tabs button.is-on {
+    color: #3a2814;
+    background: linear-gradient(180deg, #ffe39a, #d9a640);
+    border-color: var(--fh-gold-lo)
+}
+
+.fh-log-list {
+    flex: 1;
+    margin: 0;
+    padding: 2px 4px;
+    overflow-y: auto;
+    list-style: none;
+    font-size: 14px;
+    line-height: 1.35;
+    color: #f4e6c4;
+    scrollbar-width: thin;
+    scrollbar-color: #8f5e17 transparent
+}
+
+.fh-log-list time {
+    color: #b9a27a
+}
+
+.fh-log-list .is-quest {
+    color: #ffd75e
+}
+
+.fh-log-list .is-gate {
+    color: #9cf07f
+}
+
+.fh-log-list .is-item {
+    color: #f8e7c0
+}
+
+.fh-log-list .is-npc {
+    color: #9fd6ff
+}
+
+.fh-log-empty {
+    color: #b9a27a;
+    font-style: italic
+}
+
+/* Center: context prompt + skill bar */
+.fh-center {
+    grid-area: center;
+    display: grid;
+    justify-items: center;
+    gap: 8px;
+    min-width: 0
+}
+
+.fh-prompt .adv-target {
+    padding: 3px 12px;
+    font-size: 13px;
+    color: #fbe9c0;
+    background: rgba(28, 16, 6, .7);
+    border-radius: 999px
+}
+
+.fh-prompt .gp-prompt {
+    font-family: inherit;
+    color: #3a2814;
+    background: linear-gradient(180deg, #ffe39a, #f0b53a);
+    border: 2px solid var(--fh-edge);
+    border-radius: 999px;
+    box-shadow: inset 0 0 0 1.5px #fff3c4, 0 3px 0 var(--fh-edge)
+}
+
+.fh-skills {
+    display: flex;
+    gap: 7px;
+    padding: 9px 12px 12px;
+    border-radius: 16px
+}
+
+.fh-skill {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 58px;
+    height: 58px;
+    padding: 0;
+    border: 2px solid var(--fh-edge);
+    border-radius: 11px;
+    background: radial-gradient(circle at 50% 30%, #4a5b70, #1b2330 75%);
+    box-shadow: inset 0 0 0 2px var(--fh-gold-lo), inset 0 0 10px rgba(0, 0, 0, .7), 0 2px 0 var(--fh-edge)
+}
+
+.fh-skill-icon {
+    font-size: 29px;
+    line-height: 1;
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6))
+}
+
+.fh-skill.is-interact {
+    background: radial-gradient(circle at 50% 30%, #7a5a2e, #2e1c0b 75%)
+}
+
+.fh-skill.is-interact:disabled {
+    cursor: default
+}
+
+.fh-skill.is-interact:disabled .fh-skill-icon {
+    opacity: .75;
+    filter: grayscale(.4) drop-shadow(0 2px 2px rgba(0, 0, 0, .6))
+}
+
+.fh-skill.is-ready {
+    box-shadow: inset 0 0 0 2px var(--fh-gold-hi), 0 0 12px 3px rgba(255, 210, 90, .75), 0 2px 0 var(--fh-edge);
+    animation: fh-ready 1.4s ease-in-out infinite
+}
+
+@keyframes fh-ready {
+    50% {
+        box-shadow: inset 0 0 0 2px var(--fh-gold-hi), 0 0 18px 5px rgba(255, 210, 90, .9), 0 2px 0 var(--fh-edge)
+    }
+}
+
+.fh-skill.is-locked .fh-skill-icon {
+    filter: grayscale(.8) brightness(.7)
+}
+
+.fh-skill.is-empty {
+    background: radial-gradient(circle at 50% 30%, #3d3328, #1d1610 75%)
+}
+
+.fh-skill-lock {
+    position: absolute;
+    right: 3px;
+    top: 3px;
+    width: 18px;
+    height: 18px
+}
+
+.fh-skill.is-empty .fh-skill-lock {
+    position: static;
+    width: 24px;
+    height: 24px;
+    opacity: .75
+}
+
+.fh-skill-key {
+    position: absolute;
+    left: 50%;
+    bottom: -9px;
+    display: grid;
+    place-items: center;
+    width: 19px;
+    height: 19px;
+    transform: translateX(-50%);
+    font: 800 11px/1 var(--fh-font), system-ui, sans-serif;
+    color: #fff1c9;
+    background: radial-gradient(circle at 50% 35%, #6b4520, #2c180a);
+    border: 1.5px solid var(--fh-gold);
+    border-radius: 50%
+}
+
+/* Menu orbs */
+.fh-menu {
+    grid-area: menu;
+    position: relative
+}
+
+.fh-menu-row {
+    display: flex;
+    gap: 6px
+}
+
+.fh-orb {
+    position: relative;
+    display: grid;
+    justify-items: center;
+    gap: 2px;
+    padding: 0;
+    background: none;
+    border: 0;
+    color: #fff3d0
+}
+
+.fh-orb-face {
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    width: 56px;
+    height: 56px;
+    font-size: 27px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 30%, #7c512a, #3a210c 72%);
+    border: 2px solid var(--fh-edge);
+    box-shadow: inset 0 0 0 3px var(--fh-gold), inset 0 0 0 4.5px var(--fh-gold-lo), inset 0 0 12px rgba(0, 0, 0, .6), 0 3px 0 var(--fh-edge), 0 6px 10px rgba(0, 0, 0, .4);
+    transition: transform .15s
+}
+
+.fh-orb-face.is-hero {
+    position: relative;
+    background: radial-gradient(circle at 50% 35%, #fff6dc, #cfa65c 75%)
+}
+
+.fh-orb-face.is-hero img {
+    position: absolute;
+    left: 50%;
+    top: 8%;
+    width: 200%;
+    max-width: none;
+    transform: translateX(-50%)
+}
+
+.fh-orb:hover .fh-orb-face,
+.fh-orb.is-on .fh-orb-face {
+    transform: translateY(-2px);
+    box-shadow: inset 0 0 0 3px var(--fh-gold-hi), inset 0 0 0 4.5px var(--fh-gold-lo), 0 0 12px 3px rgba(255, 210, 90, .7), 0 3px 0 var(--fh-edge)
+}
+
+.fh-orb-label {
+    font-size: 13px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 0 1px 0 #000, 0 0 4px #000, 0 0 2px #000
+}
+
+.fh-orb-badge {
+    position: absolute;
+    top: -2px;
+    right: 0;
+    min-width: 19px;
+    height: 19px;
+    padding: 0 4px;
+    font-size: 11px;
+    font-weight: 800;
+    line-height: 16px;
+    color: #fff;
+    background: #d8322a;
+    border: 1.5px solid #fff;
+    border-radius: 999px
+}
+
+/* Pop-up panels above the menu */
+.fh-pop {
+    position: absolute;
+    right: 0;
+    bottom: calc(100% + 10px);
+    z-index: 5;
+    width: min(340px, calc(100vw - 24px));
+    padding: 6px 8px 8px;
+    animation: fh-pop .16s ease-out
+}
+
+@keyframes fh-pop {
+    from {
+        opacity: 0;
+        transform: translateY(6px)
+    }
+}
+
+.fh-pop-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 4px 5px;
+    font-size: 17px;
+    color: #fff1c9;
+    text-shadow: 0 2px 0 var(--fh-edge)
+}
+
+.fh-pop-close {
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    color: #fff1c9;
+    background: #2c180a;
+    border: 1.5px solid var(--fh-gold-lo);
+    border-radius: 50%
+}
+
+.fh-pop-body {
+    max-height: min(52vh, 380px);
+    overflow: auto;
+    padding: 10px 12px;
+    border-radius: 10px;
+    font-size: 14px;
+    line-height: 1.4
+}
+
+.fh-pop-note {
+    margin: 0 0 6px;
+    color: #6a5537;
+    font-size: 13px
+}
+
+.fh-guide {
+    margin: 6px 0;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, .45);
+    border-left: 4px solid #b9852c;
+    border-radius: 6px
+}
+
+.fh-guide.is-hint {
+    border-left-color: #d8322a
+}
+
+.fh-ability-list {
+    display: grid;
+    gap: 8px;
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none
+}
+
+.fh-ability-list li {
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, .4);
+    border-radius: 8px
+}
+
+.fh-ability-list p {
+    margin: 3px 0
+}
+
+.fh-ability-list small {
+    color: #7a4d0a;
+    font-weight: 600
+}
+
+.fh-keys {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 10px;
+    margin: 12px 0 0;
+    font-size: 13px
+}
+
+.fh-keys dt {
+    font-weight: 800
+}
+
+.fh-keys dd {
+    margin: 0
+}
+
+/* The stage's inventory panel, restyled inside the bag pop-up */
+.fh-pop .adv-inventory {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 0
+}
+
+.fh-pop .adv-slot {
+    width: auto;
+    height: 76px;
+    color: var(--fh-ink);
+    background: radial-gradient(circle at 50% 35%, #fff8e2, #e3c789);
+    border: 2px solid #8a6230;
+    border-radius: 10px;
+    box-shadow: inset 0 0 0 1.5px #fff3c4
+}
+
+.fh-pop .adv-slot.is-empty {
+    background: rgba(120, 80, 30, .12);
+    border-style: dashed
+}
+
+/* ---------- stage layers that share the screen with the HUD ---------- */
+.gp-fantasy .adv-bottom {
+    left: 50%;
+    right: auto;
+    bottom: 104px;
+    width: min(640px, calc(100% - 24px));
+    transform: translateX(-50%);
+    z-index: 25
+}
+
+.gp-fantasy .gp-toasts {
+    top: 112px;
+    left: 300px;
+    right: 330px
+}
+
+.gp-fantasy .adv-win {
+    font-family: var(--fh-font), system-ui, sans-serif
+}
+
+/* ---------- narrower desktops ---------- */
+@media (max-width: 1180px) {
+    .fh-log {
+        height: 132px
+    }
+
+    .fh-bottom {
+        grid-template-columns: minmax(0, 290px) minmax(0, 1fr) auto
+    }
+
+    .fh-orb-face {
+        width: 46px;
+        height: 46px;
+        font-size: 22px
+    }
+
+    .fh-orb-label {
+        font-size: 11px
+    }
+
+    .fh-skill {
+        width: 48px;
+        height: 48px
+    }
+
+    .fh-skill-icon {
+        font-size: 23px
+    }
+
+    .fh-companions {
+        display: none
+    }
+}
+
+@media (max-width: 960px) {
+    .fh-bottom {
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "center center"
+            "log menu"
+    }
+
+    .fh-log {
+        height: 104px
+    }
+
+    .fh-quest {
+        top: 210px;
+        width: 260px;
+        max-height: calc(100% - 210px - 250px)
+    }
+
+    .gp-fantasy .adv-bottom {
+        bottom: 190px
+    }
+
+    .gp-fantasy .gp-toasts {
+        left: 12px;
+        right: 12px
+    }
+}
+
+/* Touch devices get the d-pad (mouse users click or use WASD). */
+@media (hover: none), (pointer: coarse) {
+    .fh-bottom > .adv-dpad {
+        display: grid
+    }
+}
+
+/* ---------- phones ---------- */
+@media (max-width: 700px) {
+    .gp-fantasy .adv-scene {
+        --ui-space: 404px
+    }
+
+    .fh-top {
+        top: 6px;
+        left: 6px;
+        right: 6px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "char map"
+            "banner banner";
+        gap: 6px
+    }
+
+    .fh-char {
+        grid-area: char;
+        padding-left: 24px
+    }
+
+    .fh-avatar {
+        width: 54px;
+        height: 54px
+    }
+
+    .fh-char-panel {
+        width: auto;
+        min-width: 0;
+        margin-top: 4px;
+        padding: 5px 10px 6px 36px
+    }
+
+    .fh-char-name {
+        font-size: 14px
+    }
+
+    .fh-char-title {
+        display: none
+    }
+
+    .fh-bar {
+        height: 14px
+    }
+
+    .fh-bar-text {
+        font-size: 10px;
+        line-height: 10px
+    }
+
+    .fh-banner {
+        grid-area: banner;
+        width: 100%;
+        padding: 0
+    }
+
+    .fh-banner-leaf {
+        display: none
+    }
+
+    .fh-banner-plate {
+        padding: 5px 10px 6px
+    }
+
+    .fh-banner-title {
+        font-size: 16px
+    }
+
+    .fh-banner-sub {
+        margin-top: 3px;
+        font-size: 12px
+    }
+
+    .fh-minimap {
+        grid-area: map;
+        width: 112px;
+        padding: 4px
+    }
+
+    .fh-minimap-head,
+    .fh-minimap-zoom {
+        display: none
+    }
+
+    .fh-quest {
+        top: 168px;
+        right: 6px;
+        width: min(280px, calc(100% - 12px));
+        max-height: calc(100% - 168px - 250px);
+        z-index: 3
+    }
+
+    .fh-quest-head {
+        padding: 4px 10px
+    }
+
+    .fh-quest-head strong {
+        font-size: 15px
+    }
+
+    .fh-quest:not(.is-open) {
+        width: auto
+    }
+
+    .fh-quest:not(.is-open) .fh-quest-head strong {
+        flex: none
+    }
+
+    .fh-bottom {
+        left: 6px;
+        right: 6px;
+        bottom: 6px;
+        gap: 6px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "prompt prompt"
+            "log log"
+            "skills pad"
+            "menu menu"
+    }
+
+    .fh-center {
+        display: contents
+    }
+
+    .fh-prompt {
+        grid-area: prompt;
+        display: grid;
+        justify-items: center
+    }
+
+    .fh-prompt .gp-prompt {
+        width: 100%;
+        justify-content: center
+    }
+
+    .fh-log {
+        height: 66px;
+        padding: 4px 6px
+    }
+
+    .fh-log-tabs {
+        display: none
+    }
+
+    .fh-log-list {
+        font-size: 12px
+    }
+
+    .fh-skills {
+        grid-area: skills;
+        align-self: center;
+        justify-self: start;
+        gap: 4px;
+        padding: 6px 6px 10px;
+        max-width: 100%;
+        overflow-x: auto
+    }
+
+    .fh-skill {
+        flex: none;
+        box-sizing: border-box;
+        width: 38px;
+        height: 38px;
+        border-radius: 9px
+    }
+
+    .fh-skill-icon {
+        font-size: 17px
+    }
+
+    .fh-skill-lock {
+        width: 14px;
+        height: 14px
+    }
+
+    .fh-skill.is-empty .fh-skill-lock {
+        width: 18px;
+        height: 18px
+    }
+
+    .fh-skill-key {
+        width: 15px;
+        height: 15px;
+        bottom: -7px;
+        font-size: 9px
+    }
+
+    .fh-bottom > .adv-dpad {
+        grid-area: pad;
+        display: grid
+    }
+
+    .fh-menu-row {
+        justify-content: space-between
+    }
+
+    .fh-orb-face {
+        width: 40px;
+        height: 40px;
+        font-size: 19px
+    }
+
+    .fh-orb-label {
+        font-size: 10px
+    }
+
+    .fh-pop {
+        right: 0;
+        left: 0;
+        width: auto
+    }
+
+    .gp-fantasy .adv-bottom {
+        bottom: 6px;
+        width: calc(100% - 12px)
+    }
+
+    .gp-fantasy .gp-toasts {
+        top: 120px
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fh-badge.is-active,
+    .fh-skill.is-ready,
+    .fh-pop {
+        animation: none
+    }
+
+    .fh-orb-face,
+    .fh-chevron,
+    .fh-companions li {
+        transition: none
+    }
+}
+
+/* ---------- stage art skin (StageScene.hudArt) ----------
+   Painted frames from the stage asset pack drawn BEHIND the same React
+   content; every label, value and marker stays dynamic. Slice numbers are
+   measured on the PNGs (transparent padding is pushed into the outset and
+   clipped, which also hides stray specks under the panels). */
+.fh.has-art .fh-frame {
+    --k: .42;
+    isolation: isolate;
+    background: none;
+    border: 0;
+    border-radius: 10px;
+    box-shadow: 0 6px 14px rgba(0, 0, 0, .38)
+}
+
+/* hud-panel-dark.png (512×256): body 26–450 × 8–217 (a white extraction fringe
+   and a caption sit outside it) */
+.fh.has-art .fh-frame::before {
+    inset: 0;
+    z-index: -1;
+    background: none;
+    border-style: solid;
+    border-width: 0;
+    border-image-source: var(--fh-art-dark);
+    border-image-slice: 28 81 66 46 fill;
+    border-image-width: calc(28px * var(--k)) calc(81px * var(--k)) calc(66px * var(--k)) calc(46px * var(--k));
+    border-image-outset: calc(8px * var(--k)) calc(61px * var(--k)) calc(38px * var(--k)) calc(26px * var(--k));
+    clip-path: inset(0 round 8px)
+}
+
+/* hud-panel.png (320×256): parchment 8–309 × 45–196, stretched to the box. The
+   padding, fringe and specks fall outside the background area. */
+.fh.has-art .fh-parch {
+    border: 0;
+    box-shadow: inset 0 0 0 1px rgba(90, 60, 25, .35);
+    background: var(--fh-art-panel) 44.44% 43.27% / calc(100% * 320 / 302) calc(100% * 256 / 152) no-repeat, var(--fh-parch)
+}
+
+/* hud-banner.png (768×160): two-tier plaque with leafy ends; only the middle stretches. */
+.fh.has-art .fh-banner {
+    padding: 0
+}
+
+.fh.has-art .fh-banner-leaf {
+    display: none
+}
+
+.fh.has-art .fh-banner-plate {
+    --bk: .5;
+    box-sizing: border-box;
+    height: calc(160px * var(--bk));
+    padding: calc(16px * var(--bk)) calc(124px * var(--bk)) 0;
+    box-shadow: none
+}
+
+.fh.has-art .fh-banner-plate::before {
+    border-image-source: var(--fh-art-banner);
+    border-image-slice: 0 135 fill;
+    border-image-width: 0 calc(135px * var(--bk));
+    border-image-outset: 0;
+    clip-path: none;
+    filter: drop-shadow(0 4px 5px rgba(0, 0, 0, .45))
+}
+
+.fh.has-art .fh-banner-title {
+    line-height: calc(64px * var(--bk))
+}
+
+.fh.has-art .fh-banner-sub {
+    margin-top: calc(10px * var(--bk));
+    height: calc(46px * var(--bk));
+    padding: 0 8px;
+    background: none;
+    border: 0;
+    box-shadow: none
+}
+
+/* hud-button.png (128×128): bronze ring 8–119 × 11–116, padding cropped */
+.fh.has-art .fh-orb-face,
+.fh.has-art .fh-skill,
+.fh.has-art .fh-minimap-zoom button {
+    background: var(--fh-art-button) 50% 50% / 116% 116% no-repeat;
+    border: 0;
+    border-radius: 50%;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, .45)
+}
+
+.fh.has-art .fh-orb-face.is-hero {
+    background: radial-gradient(circle at 50% 35%, #fff6dc, #cfa65c 62%, transparent 64%), var(--fh-art-button) 50% 50% / 116% 116% no-repeat
+}
+
+.fh.has-art .fh-orb:hover .fh-orb-face,
+.fh.has-art .fh-orb.is-on .fh-orb-face {
+    box-shadow: 0 0 12px 3px rgba(255, 210, 90, .75), 0 3px 6px rgba(0, 0, 0, .45)
+}
+
+.fh.has-art .fh-skill.is-ready {
+    box-shadow: 0 0 12px 3px rgba(255, 210, 90, .75);
+    animation: fh-ready-art 1.4s ease-in-out infinite
+}
+
+@keyframes fh-ready-art {
+    50% { box-shadow: 0 0 18px 6px rgba(255, 210, 90, .9) }
+}
+
+.fh.has-art .fh-skill.is-empty,
+.fh.has-art .fh-skill.is-locked {
+    filter: saturate(.6) brightness(.85)
+}
+
+/* hud-leaves.png as a corner sprig on the minimap */
+.fh.has-art .fh-minimap::after {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: -12px;
+    width: 64px;
+    height: 32px;
+    background: var(--fh-art-leaves) 50% 50% / contain no-repeat;
+    transform: rotate(-14deg);
+    filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .4));
+    pointer-events: none
+}
+
+/* Marker art inside the minimap (positions stay live) */
+.fh-mark.has-icon {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none
+}
+
+.fh-mark.has-icon img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .7))
+}
+
+.fh-mark.is-item.has-icon {
+    width: 14px;
+    height: 14px
+}
+
+.fh-mark.is-exit-locked.has-icon img {
+    filter: grayscale(1) brightness(.75) drop-shadow(0 1px 1px rgba(0, 0, 0, .7))
+}
+
+@media (max-width: 700px) {
+    .fh.has-art .fh-banner-plate {
+        --bk: .375;
+        padding-top: calc(18px * var(--bk))
+    }
+
+    .fh.has-art .fh-minimap::after {
+        display: none
+    }
+
+    .fh-mark.has-icon {
+        width: 12px;
+        height: 12px
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fh.has-art .fh-skill.is-ready {
+        animation: none
+    }
+}
