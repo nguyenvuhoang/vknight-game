@@ -51,6 +51,10 @@ type Props = {
   onMap: () => void;
   onNotice: (text: string) => void;
   suspended: boolean;
+  /** Clue items guarded by a backend puzzle: item code -> solved on the server. */
+  puzzleSteps?: Map<string, boolean>;
+  /** Stage modal drawn inside the HUD layer (e.g. the puzzle panel), so it shares the HUD font and art. */
+  overlay?: ReactNode;
 };
 
 export default function FantasyHudShell(p: Props) {
@@ -111,7 +115,7 @@ export default function FantasyHudShell(p: Props) {
         <MiniMap title={p.title} scene={p.scene} posRef={p.posRef} markers={markers} icons={art?.markers} />
       </header>
 
-      <FantasyQuestTracker objectives={g.objectives} items={g.items} state={p.state} open={p.questOpen} onToggle={p.onToggleQuest} />
+      <FantasyQuestTracker objectives={g.objectives} items={g.items} state={p.state} open={p.questOpen} onToggle={p.onToggleQuest} puzzleSteps={p.puzzleSteps} />
 
       <div ref={p.dockRef} className="fh-bottom">
         <GameActivityLog events={p.events} />
@@ -135,6 +139,8 @@ export default function FantasyHudShell(p: Props) {
         />
         {p.dpad}
       </div>
+
+      {p.overlay}
 
       {/* Portaled: a fixed modal must not live inside the HUD layer or the animated scene. */}
       {profileOpen &&

@@ -2,7 +2,9 @@
 // Backend-driven stage (WF_BO_GET_MAP_GAMEPLAY): NPCs/items at backend spawn
 // positions, dialogue graph, inventory and objectives run by lib/gameplay.
 // Scene movement/camera/grounding is the shared useSceneWalker. Progress is
-// local only (no server-authoritative gameplay workflow yet).
+// local only (no server-authoritative gameplay workflow yet). Items guarded by a
+// backend map puzzle open the puzzle panel first: completion comes from the
+// puzzle workflows, picking the item up stays local inventory.
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { Bushes } from "@/components/adventure/Sprites";
@@ -12,13 +14,16 @@ import InteractionPrompt from "./InteractionPrompt";
 import InventoryPanel from "./InventoryPanel";
 import ObjectiveTracker from "./ObjectiveTracker";
 import FantasyHudShell from "./hud/FantasyHudShell";
+import PuzzlePanel from "./puzzles/PuzzlePanel";
 import type { ActivityEvent, ActivityKind } from "./hud/types";
 import { choose, reachNode, startNode, viewChoices } from "@/lib/gameplay/dialogue-engine";
 import { emptyGameplayState, type DialogueNode, type GameplayExit, type GameplayItem, type GameplayNpc, type GameplayState, type MapGameplay } from "@/lib/gameplay/gameplay-types";
 import { exitLockReason, exitStatus, interactWithNpc, enterExit } from "@/lib/gameplay/interaction-engine";
 import { isItemVisible, pickUp } from "@/lib/gameplay/inventory-engine";
 import { isStageComplete, objectiveProgress, objectiveStatus, settleObjectives } from "@/lib/gameplay/objective-engine";
+import type { MapPuzzle } from "@/lib/gameplay/puzzle-types";
 import { applySceneFixes, type SpriteArt, type StageScene } from "@/lib/gameplay/stage-scenes";
+import { useMapPuzzles } from "@/lib/gameplay/use-map-puzzles";
 import { useSceneWalker } from "@/lib/scene/use-scene-walker";
 import { getHero } from "@/lib/heroes";
 import type { HeroId } from "@/lib/types";
@@ -60,6 +65,10 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
   const [questOpen, setQuestOpen] = useState(true);
   const [exiting, setExiting] = useState(false);
   const [events, setEvents] = useState<ActivityEvent[]>([]);
+  // Backend map puzzles (fantasy-HUD stages, where the puzzle panel lives).
+  const puzzles = useMapPuzzles(g.mapCode, hero, fantasy);
+  const [solving, setSolving] = useState<{ puzzle: MapPuzzle; item: GameplayItem } | null>(null);
+  const puzzleFallbackLogged = useRef(false);
   const stateRef = useRef(state);
   stateRef.current = state;
   const onWinRef = useRef(onWin);
@@ -110,12 +119,13 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
   const entitiesRef = useRef(entities);
   entitiesRef.current = entities;
   const showWin = won && !talk && !exiting;
+  const busyUi = !!talk || !!solving;
 
   const walker = useSceneWalker({
     aspect,
     walk: scene.walk,
     spawn: scene.spawn,
-    mode: () => (exiting ? "scripted" : talk || showWin ? "paused" : "active"),
+    mode: () => (exiting ? "scripted" : talk || solving || showWin ? "paused" : "active"),
     targets: () => entitiesRef.current.map((e) => ({ id: e.id, at: e.kind === "npc" ? e.npc : e.kind === "item" ? e.item : e.exit })),
     nearRadius: scene.interactRadius,
   });
@@ -175,6 +185,48 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
     commit(settled);
   };
 
+  /** The backend puzzle guarding an item: explicit link, else the spawn-code convention. */
+  const puzzleFor = (item: GameplayItem) => puzzles.puzzles?.find((p) => p.spawnCode === item.spawnCode || p.itemCode === item.code) ?? null;
+  const puzzlePending = (item: GameplayItem) => {
+    const p = puzzleFor(item);
+    return p != null && !puzzles.isSolved(p.code);
+  };
+
+  /** Items with an unsolved puzzle open it; solved (server progress) or plain items are picked up. */
+  const openItem = (item: GameplayItem) => {
+    if (tooFar(item)) return flash(`Không với tới ${item.name}.`);
+    if (fantasy && puzzles.status === "loading") return flash("Đang tải câu đố từ máy chủ…");
+    const p = puzzleFor(item);
+    if (!p) {
+      if (fantasy && puzzles.error && !puzzleFallbackLogged.current) {
+        // Definitions unavailable: keep the stage playable, and say so.
+        puzzleFallbackLogged.current = true;
+        console.warn(`[puzzles] ${g.mapCode}: ${puzzles.error} Items are collected without puzzles.`);
+        log("system", "Câu đố chưa tải được từ máy chủ — nhặt manh mối trực tiếp.");
+      }
+      return pick(item);
+    }
+    if (puzzles.isSolved(p.code)) return pick(item);
+    log("quest", `Mở câu đố: ${p.title}`);
+    setSolving({ puzzle: p, item });
+  };
+
+  const submitPuzzle = async (answer: string) => {
+    if (!solving) return { ok: false as const, error: "Không có câu đố nào đang mở." };
+    const { puzzle } = solving;
+    const out = await puzzles.submit(puzzle.code, answer);
+    if (out.ok) {
+      const r = out.result;
+      if (r.correct || r.alreadyCompleted) {
+        flash(`🧩 Giải được: ${puzzle.title}`);
+        log("quest", `Giải được câu đố: ${puzzle.title}`);
+      } else {
+        log("quest", `Trả lời sai: ${r.message ?? puzzle.title}`);
+      }
+    }
+    return out;
+  };
+
   const passExit = (exit: GameplayExit) => {
     if (tooFar(exit)) return flash("Lại gần cổng hơn chút nữa.");
     const r = enterExit(g, stateRef.current, exit.spawnCode);
@@ -192,14 +244,14 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
   };
 
   const interact = (id: string | null) => {
-    if (!id || talk || showWin || exiting) return;
+    if (!id || talk || solving || showWin || exiting) return;
     const e = entitiesRef.current.find((x) => x.id === id);
     if (!e) return;
     if (e.kind === "npc") {
       // Stand beside the NPC (ground-clamped), then talk.
       walker.walkTo({ x: e.npc.x - 6, y: e.npc.y }, () => startTalk(e.npc));
     } else if (e.kind === "item") {
-      walker.walkTo({ x: e.item.x, y: e.item.y }, () => pick(e.item));
+      walker.walkTo({ x: e.item.x, y: e.item.y }, () => openItem(e.item));
     } else if (exitStatus(e.exit, stateRef.current) === "LOCKED") {
       flash(`🔒 Cổng còn khóa. ${exitLockReason(g, e.exit, stateRef.current) ?? ""}`.trim());
     } else {
@@ -234,7 +286,7 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select")) return;
-      if ((e.key === "e" || e.key === "E" || (fantasy && e.key === "1")) && !talk) interact(walker.near);
+      if ((e.key === "e" || e.key === "E" || (fantasy && e.key === "1")) && !busyUi) interact(walker.near);
       else if (e.key === "Escape" && talk) setTalk(null);
     };
     window.addEventListener("keydown", down);
@@ -242,16 +294,23 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
   });
 
   const nearEntity = entities.find((e) => e.id === walker.near);
+  // Quest checklist marks for clue items guarded by a puzzle (item code -> solved on the server?).
+  const puzzleSteps = new Map(g.items.flatMap((it) => {
+    const p = puzzleFor(it);
+    return p ? [[it.code, puzzles.isSolved(p.code)] as const] : [];
+  }));
   const promptLabel = !nearEntity
     ? null
     : nearEntity.kind === "npc"
       ? `Nói chuyện với ${nearEntity.npc.name}`
       : nearEntity.kind === "item"
-        ? `Nhặt ${nearEntity.item.name}`
+        ? puzzlePending(nearEntity.item)
+          ? `Giải đố: ${nearEntity.item.name}`
+          : `Nhặt ${nearEntity.item.name}`
         : exitStatus(nearEntity.exit, state) === "OPEN"
           ? "Đi qua cổng"
           : "Cổng đang khóa";
-  const promptIcon = nearEntity?.kind === "npc" ? "💬" : nearEntity?.kind === "exit" ? "🚪" : "🖐";
+  const promptIcon = nearEntity?.kind === "npc" ? "💬" : nearEntity?.kind === "exit" ? "🚪" : nearEntity?.kind === "item" && puzzlePending(nearEntity.item) ? "🧩" : "🖐";
   const activeObjective = g.objectives.find((o) => objectiveStatus(o, state) === "ACTIVE");
   const activeProgress = activeObjective ? objectiveProgress(activeObjective, state) : null;
   const npcState = (npc: GameplayNpc) =>
@@ -519,9 +578,9 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
           events={events}
           questOpen={questOpen}
           onToggleQuest={() => setQuestOpen((o) => !o)}
-          interactLabel={talk || showWin || exiting ? null : promptLabel}
+          interactLabel={busyUi || showWin || exiting ? null : promptLabel}
           onInteract={() => interact(walker.near)}
-          prompt={<InteractionPrompt label={talk || showWin || exiting ? null : promptLabel} icon={promptIcon} onActivate={() => interact(walker.near)} />}
+          prompt={<InteractionPrompt label={busyUi || showWin || exiting ? null : promptLabel} icon={promptIcon} onActivate={() => interact(walker.near)} />}
           dpad={
             <div className="adv-dpad" aria-label="Di chuyển">
               <button type="button" aria-label="Lên" {...walker.hold("ArrowUp")}>▲</button>
@@ -534,7 +593,27 @@ export default function GameplayStage({ gameplay: rawGameplay, warnings, scene, 
           hintText={hintText}
           onMap={onMap}
           onNotice={flash}
-          suspended={!!talk || showWin}
+          suspended={busyUi || showWin}
+          puzzleSteps={puzzleSteps}
+          overlay={
+            solving && (
+              <PuzzlePanel
+                key={solving.puzzle.code}
+                puzzle={solving.puzzle}
+                itemName={solving.item.name}
+                itemImage={solving.item.imageAvailable ? solving.item.imageUrl : null}
+                solved={puzzles.isSolved(solving.puzzle.code)}
+                attempts={puzzles.progress?.puzzles[solving.puzzle.code]?.attempts ?? 0}
+                onSubmit={submitPuzzle}
+                onCollect={() => {
+                  const item = solving.item;
+                  setSolving(null);
+                  pick(item);
+                }}
+                onClose={() => setSolving(null)}
+              />
+            )
+          }
         />
       ) : (
       <>

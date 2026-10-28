@@ -9,6 +9,8 @@ type Props = {
   state: GameplayState;
   open: boolean;
   onToggle: () => void;
+  /** Item code -> its puzzle is solved on the server (only items guarded by a puzzle). */
+  puzzleSteps?: Map<string, boolean>;
 };
 
 /** Item checklist for "collect all of these" objectives (ALL of ITEM_COLLECTED). */
@@ -23,7 +25,7 @@ function itemSteps(cond: Condition | null): Extract<Condition, { type: "ITEM_COL
 
 const STATUS_TEXT = { COMPLETED: "Đã xong", ACTIVE: "Đang làm", LOCKED: "Chưa mở" } as const;
 
-export default function FantasyQuestTracker({ objectives, items, state, open, onToggle }: Props) {
+export default function FantasyQuestTracker({ objectives, items, state, open, onToggle, puzzleSteps }: Props) {
   const done = objectives.filter((o) => objectiveStatus(o, state) === "COMPLETED").length;
   return (
     <aside id="gp-quest" className={`fh-quest ${open ? "is-open" : ""}`} aria-label="Nhiệm vụ">
@@ -62,10 +64,14 @@ export default function FantasyQuestTracker({ objectives, items, state, open, on
                     <ul className="fh-q-steps">
                       {steps.map((c) => {
                         const ok = evaluate(c, state);
+                        const solved = puzzleSteps?.get(c.item_code);
                         return (
                           <li key={c.item_code} className={ok ? "is-done" : ""}>
                             <SubCheck done={ok} />
                             {items.find((i) => i.code === c.item_code)?.name ?? c.item_code}
+                            {!ok && solved !== undefined && (
+                              <span className={`fh-q-puzzle ${solved ? "is-solved" : ""}`}>{solved ? "🧩 đã giải — nhặt" : "🧩 giải đố"}</span>
+                            )}
                           </li>
                         );
                       })}

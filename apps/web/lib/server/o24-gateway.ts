@@ -11,6 +11,9 @@ export const WORKFLOWS = {
   listCharacters: "WF_BO_GET_LIST_CHARACTER",
   chapterMap: "WF_BO_GET_CHAPTER_MAP",
   mapGameplay: "WF_BO_GET_MAP_GAMEPLAY",
+  mapPuzzles: "WF_BO_GET_MAP_PUZZLES",
+  submitPuzzleAnswer: "WF_BO_SUBMIT_PUZZLE_ANSWER",
+  puzzleProgress: "WF_BO_GET_PLAYER_PUZZLE_PROGRESS",
 } as const;
 type WorkflowId = (typeof WORKFLOWS)[keyof typeof WORKFLOWS];
 
@@ -19,6 +22,8 @@ export class GatewayError extends Error {
     message: string,
     readonly kind: "config" | "timeout" | "network" | "http" | "backend" | "format",
     readonly status?: number,
+    /** First backend error code (e.g. invalid.session, required.with.field) for kind "backend". */
+    readonly backendCode?: string,
   ) {
     super(message);
   }
@@ -91,7 +96,10 @@ export async function callWorkflow<T>(workflowid: WorkflowId, fields: Record<str
     throw new GatewayError("gateway envelope missing `success`", "format");
   }
   if (!env.success) {
-    throw new GatewayError(`workflow failed: ${env.code ?? "?"} ${env.message ?? ""}`.trim(), "backend");
+    const first = Array.isArray(env.errors) ? (env.errors[0] as { code?: unknown; info?: unknown } | undefined) : undefined;
+    const code = typeof first?.code === "string" ? first.code : undefined;
+    const info = typeof first?.info === "string" ? first.info : env.message ?? "";
+    throw new GatewayError(`workflow failed: ${env.code ?? "?"} ${code ?? ""} ${info}`.trim(), "backend", undefined, code);
   }
   if (env.data == null) throw new GatewayError("workflow returned no data", "format");
   return env.data;

@@ -574,6 +574,23 @@
     color: #2f5b20
 }
 
+/* Puzzle state of a clue still to collect */
+.fh-q-puzzle {
+    margin-left: auto;
+    padding: 0 6px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    color: #7a4a12;
+    background: rgba(226, 176, 76, .25)
+}
+
+.fh-q-puzzle.is-solved {
+    color: #2f5b20;
+    background: rgba(109, 155, 58, .22)
+}
+
 .fh-subcheck {
     flex: none;
     width: 15px;
