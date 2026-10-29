@@ -239,6 +239,7 @@ export type HudArt = {
   markers: { talk: string; quest: string; item: string; exit: string };
 };
 
+const STAGE01_ART = "/chapters/chap01/gameplay/stage01";
 const STAGE02_ART = "/chapters/chap01/gameplay/stage02";
 const STAGE03_ART = "/chapters/chap01/gameplay/stage03";
 const STAGE04_ART = "/chapters/chap01/gameplay/stage04";
@@ -259,27 +260,49 @@ const STAGE02_HUD_ART: HudArt = {
 };
 
 const STAGE_SCENES: Record<string, StageScene> = {
-  // Ải 1 — Bước Ra Khỏi Nhà: the map's own illustration (CHAP01_MAP01
-  // image_url). Backend spawn coordinates line up with its house fronts.
+  // Ải 1 — Bước Ra Khỏi Nhà: the Stage 01 pack panorama (1672×607, the whole
+  // painting is the world). Thatched house on the left (door x 8–15, step y 64–69),
+  // a dirt yard that runs down to the bottom edge and right to the pier; the
+  // pots, fences, rocks, flower bushes and the river are not walkable.
   CHAP01_MAP01: {
-    src: "/chapters/chap01/chap01-map01.jpg",
-    width: 500,
-    height: 500,
-    crop: { x: 0, y: 0, w: 500, h: 500 },
+    src: `${STAGE01_ART}/stage01-background.png`,
+    width: 1672,
+    height: 607,
+    crop: { x: 0, y: 0, w: 1672, h: 607 },
     walk: [
-      { x0: 28, x1: 74, y0: 85, y1: 92 }, // cobbles in front of the houses
-      { x0: 44, x1: 60, y0: 90, y1: 99 }, // path down to the gate
-      { x0: 46, x1: 62, y0: 66, y1: 86 }, // path up the middle
-      { x0: 56, x1: 66, y0: 57, y1: 68 }, // path to the back house
-      { x0: 58, x1: 70, y0: 74, y1: 86 }, // grass by the right house
-      { x0: 8, x1: 30, y0: 90, y1: 99 }, // lawn in front of the left house
-      { x0: 62, x1: 82, y0: 88, y1: 97 }, // lawn bottom right
+      { x0: 6, x1: 20, y0: 65, y1: 69 }, // stone step in front of the door
+      { x0: 11, x1: 46, y0: 69, y1: 75 }, // yard in front of the house (pots / grass above y 69)
+      { x0: 18, x1: 46, y0: 75, y1: 80 }, // yard, down to the rocks (bushes left of x 18)
+      { x0: 44, x1: 64, y0: 66, y1: 84 }, // the open yard in the middle
+      { x0: 57, x1: 73, y0: 62, y1: 69 }, // dirt to the pier (fence above y 62, pier from x 73)
+      { x0: 63, x1: 69, y0: 69, y1: 77 }, // grass beside the rocks (rocks from x 69, fence from y 80)
+      { x0: 46, x1: 60, y0: 84, y1: 96 }, // the road down to the bottom edge
     ],
-    spawn: { x: 32, y: 89 }, // just outside the left house's door
-    heroHeight: 14,
-    npcHeight: 7.5,
-    itemHeight: 4,
-    interactRadius: 12,
+    spawn: { x: 14, y: 71 }, // just off the step, feet on the dirt
+    // Depth runs 0.7 (y 62) → 1.05 (y 96): at the door the hero is ~2/3 of its
+    // height, the dog about 40 % of the hero.
+    heroHeight: 28,
+    npcHeight: 12,
+    itemHeight: 5,
+    interactRadius: 6,
+    pathfind: true,
+    nativeScale: 1.15,
+    ambient: true,
+    // Stage 01 sprite pack (gameplay/*.png at the backend image_url): each frame is
+    // the measured opaque bounds of its 512 / 256 px canvas, so the bottom edge is
+    // where the paws / item touch the ground.
+    sprites: {
+      npc_dog_teaser: { frame: frame(512, 512, 171, 339, 170, 162), anchor: "ground" },
+      item_dog_bone: { frame: frame(256, 256, 64, 163, 127, 82), anchor: "ground", height: 4.5 },
+      item_sandal_left: { frame: frame(256, 256, 67, 133, 121, 112), anchor: "ground", height: 4.5 },
+      item_sandal_right: { frame: frame(256, 256, 51, 141, 154, 104), anchor: "ground", height: 4.5 },
+    },
+    spawnFixes: {
+      // Recommended data fixes (ChapterMapNpcSpawn / ChapterMapItemSpawn), authored for chap01-map01.jpg:
+      NPC_DOG_TEASER: { backend: { x: 65, y: 78 }, use: { x: 58, y: 75 }, reason: "on the grass against the rocks; use (58, 75) on the yard road" },
+      SPAWN_STAGE01_SANDAL_LEFT: { backend: { x: 72, y: 82 }, use: { x: 51, y: 89 }, reason: "on the front fence post; use (51, 89) on the road down" },
+      SPAWN_STAGE01_SANDAL_RIGHT: { backend: { x: 78, y: 82 }, use: { x: 69, y: 66 }, reason: "behind the front fence (unreachable); use (69, 66) on the dirt by the pier" },
+    },
   },
   // Ải 2 — Con Chó Đầu Ngõ: the Stage 2 asset pack. The world is the whole
   // painting (the frame the backend positions were authored in: sign post,
