@@ -5,11 +5,19 @@ import type { Action, DialogueChoice, DialogueNode, EngineResult, GameplayState,
 
 const nodeOf = (g: MapGameplay, code: string | null) => (code ? g.dialogues.find((d) => d.code === code) ?? null : null);
 
-/** Entry nodes: not the target of any `next`. The first whose trigger passes starts the talk. */
-export function startNode(g: MapGameplay, s: GameplayState): DialogueNode | null {
+/**
+ * Entry nodes: not the target of any `next`. The first whose trigger passes starts the talk.
+ * With several NPCs the backend links a dialogue to its speaker only by name
+ * (NPC_STAGE03_FARMER ↔ DIALOGUE_STAGE03_FARMER_*): when some entry nodes are
+ * named after `npcCode`, only those are considered for that NPC.
+ */
+export function startNode(g: MapGameplay, s: GameplayState, npcCode?: string): DialogueNode | null {
   const targets = new Set(g.dialogues.flatMap((d) => [d.next, ...d.choices.map((c) => c.next)]).filter(Boolean));
   const roots = g.dialogues.filter((d) => !targets.has(d.code));
-  return (roots.length ? roots : g.dialogues).find((d) => evaluate(d.trigger, s)) ?? null;
+  const pool = roots.length ? roots : g.dialogues;
+  const prefix = npcCode ? `DIALOGUE_${npcCode.replace(/^NPC_/, "")}` : null;
+  const own = prefix ? pool.filter((d) => d.code === prefix || d.code.startsWith(`${prefix}_`)) : [];
+  return (own.length ? own : pool).find((d) => evaluate(d.trigger, s)) ?? null;
 }
 
 /** Apply a batch atomically: all actions succeed or the state is unchanged. */

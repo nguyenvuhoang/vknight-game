@@ -8,6 +8,7 @@ import { adaptProgress, adaptPuzzles } from "@/lib/gameplay/puzzle-adapter";
 import type { MapPuzzle, MapPuzzlesResponse, PuzzleApiError } from "@/lib/gameplay/puzzle-types";
 import { callWorkflow, GatewayError, WORKFLOWS } from "@/lib/server/o24-gateway";
 import { MAP_CODE, puzzlePlayer, readJson } from "@/lib/server/puzzle-player";
+import { runStatus } from "@/lib/server/puzzle-runs";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +64,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ mapCode
     progress: progressResult.status === "fulfilled" ? progressResult.value : null,
     progressError: progressResult.status === "rejected" ? reason(route, "progress", progressResult.reason) : null,
     warnings: defsResult.status === "fulfilled" ? defsResult.value.warnings : [],
+    run: runStatus(player, mapCode),
   };
   if (body.warnings.length) console.warn(`[${route}] warnings:`, body.warnings);
   return NextResponse.json(body, { headers: NO_STORE });

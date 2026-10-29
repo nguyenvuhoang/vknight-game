@@ -1,0 +1,59 @@
+{
+  "mapCode": "CHAP01_MAP03",
+  "background": "stage03-background.png",
+  "panorama": "stage03-panorama.png",
+  "worldWidth": 1920,
+  "worldHeight": 1080,
+  "coordinateSpace": "percent of image / stage world (not viewport)",
+  "spriteAnchor": "bottom-center (paws/feet on floor at PositionY)",
+  "interaction": {
+    "triggerRadiusPercent": 7,
+    "heroMovementBlockedWhilePuzzle": true,
+    "puzzleProtectedItemsFailClosed": true
+  },
+  "preliminarySpawns": {
+    "SPAWN_STAGE03_FARMER": {
+      "x": 24,
+      "y": 67,
+      "sprite": "farmer.png",
+      "role": "NPC",
+      "interactive": true
+    },
+    "SPAWN_STAGE03_SCARECROW": {
+      "x": 72,
+      "y": 46,
+      "sprite": "scarecrow.png",
+      "role": "NPC",
+      "interactive": true
+    },
+    "SPAWN_STAGE03_RICE_BUNDLE": {
+      "x": 39,
+      "y": 69,
+      "sprite": "rice-bundle.png",
+      "anchor": "ground",
+      "interactive": true
+    },
+    "SPAWN_STAGE03_WATER_KEY": {
+      "x": 60,
+      "y": 57,
+      "sprite": "water-key.png",
+      "anchor": "ground",
+      "interactive": true
+    },
+    "SPAWN_STAGE03_ROUTE_MAP": {
+      "x": 79,
+      "y": 72,
+      "sprite": "route-map.png",
+      "anchor": "ground",
+      "interactive": true
+    },
+    "SPAWN_STAGE03_EXIT": {
+      "x": 89,
+      "y": 73,
+      "sprite": "exit-marker.png",
+      "interactive": true,
+      "unlockAfter": "OBJ_STAGE03_COLLECT_CLUES"
+    }
+  },
+  "note": "Coordinates are backend seeds/visual starting points, not measured safe walkable positions. Validate against actual rendered scene. The background is a composite from panoramic concept art, with softened extension bands."
+}

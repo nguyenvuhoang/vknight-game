@@ -70,9 +70,25 @@ export type MapPuzzlesResponse = {
   progress: PuzzleProgress | null;
   progressError: string | null;
   warnings: string[];
+  /** The current stage run on a run-limited map (lib/server/puzzle-runs); null elsewhere. */
+  run?: PuzzleRunStatus | null;
 };
 
-/** Body of POST /api/game/maps/[mapCode]/puzzles/[puzzleCode]/answer. */
-export type PuzzleAnswerResponse = { result: PuzzleSubmitResult };
+/**
+ * A stage run's puzzle attempts, kept server-side: backend-graded wrong answers
+ * per puzzle in this run (not the lifetime AttemptCount). Failed after
+ * `maxWrong` on one puzzle; then submits are refused until a restart.
+ */
+export type PuzzleRunStatus = { id: string; maxWrong: number; wrong: Record<string, number>; failed: boolean; failedPuzzle: string | null };
 
-export type PuzzleApiError = { error: string; code: "bad_request" | "config" | "timeout" | "unavailable" | "not_found" };
+/** Body of POST /api/game/maps/[mapCode]/puzzles/[puzzleCode]/answer. */
+export type PuzzleAnswerResponse = { result: PuzzleSubmitResult; run?: PuzzleRunStatus | null };
+
+/** Body of POST /api/game/maps/[mapCode]/run/restart. */
+export type PuzzleRunResponse = { run: PuzzleRunStatus };
+
+export type PuzzleApiError = {
+  error: string;
+  code: "bad_request" | "config" | "timeout" | "unavailable" | "not_found" | "stage_failed" | "busy" | "not_failed";
+  run?: PuzzleRunStatus | null;
+};

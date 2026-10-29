@@ -3169,3 +3169,145 @@ html[data-scene-leave="back"] .scene-screen {
         animation: none
     }
 }
+
+/* Physical world objects (StageScene.worldObjects): (left, top) is the base contact point. */
+.gp-object {
+    position: absolute;
+    display: block;
+    transform: translate(-50%, -100%);
+    pointer-events: none
+}
+
+.gp-object .gp-sprite-frame {
+    filter: none
+}
+
+.gp-object.is-flipped .gp-sprite-frame {
+    transform: scaleX(-1)
+}
+
+/* An exit drawn from a sprite: dimmed until its unlock condition holds */
+.gp-exit.is-LOCKED .gp-sprite-frame {
+    filter: grayscale(.75) brightness(.75)
+}
+
+.gp-exit.is-OPEN .gp-sprite-frame {
+    filter: drop-shadow(0 0 6px #ffe27a)
+}
+
+/* StageScene.portraitZoom: phones in portrait see the playfield band, not the padding */
+@media (orientation: portrait) {
+    .gp .adv-world {
+        --portrait-zoom: var(--scene-portrait-zoom, 1)
+    }
+}
+
+/* Repairable world object (e.g. Stage 4 bridge): clickable while broken, shakes while repaired */
+.gp-object.is-clickable {
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent
+}
+
+.gp-object.is-clickable:hover .adv-spot-label,
+.gp-object.is-clickable:focus-visible .adv-spot-label,
+.gp-object.is-clickable.is-near .adv-spot-label {
+    display: block
+}
+
+.gp-object.is-clickable:focus-visible {
+    outline: 3px solid #30291d;
+    outline-offset: 3px;
+    border-radius: 8px
+}
+
+.gp-object.is-clickable.is-near .gp-sprite-frame {
+    filter: drop-shadow(0 0 5px #ffe27a)
+}
+
+.gp-object.is-PARTIAL .gp-sprite-frame {
+    animation: gp-repair-shake .32s ease-in-out infinite
+}
+
+.gp-object.is-repair.is-REPAIRED .gp-sprite-frame {
+    animation: gp-repair-done .7s ease-out 1
+}
+
+@keyframes gp-repair-shake {
+    25% { transform: translateY(-1.5%) rotate(-.6deg) }
+    75% { transform: translateY(1%) rotate(.6deg) }
+}
+
+@keyframes gp-repair-done {
+    0% { filter: brightness(1.5) drop-shadow(0 0 10px #ffe27a) }
+    100% { filter: none }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gp-object.is-PARTIAL .gp-sprite-frame,
+    .gp-object.is-repair.is-REPAIRED .gp-sprite-frame {
+        animation: none
+    }
+}
+
+/* StageScene.ambient: a short panorama world, the screen around it filled with a blurred copy */
+.gp-ambient {
+    position: absolute;
+    inset: -24px;
+    background-repeat: no-repeat;
+    filter: blur(14px) brightness(.72) saturate(1.1);
+    pointer-events: none
+}
+
+/* "Mất Trí Nhớ Tạm Thời" — failed stage run (reuses the fantasy puzzle panel frame) */
+.gp-amnesia .pz-panel {
+    max-width: 460px;
+    animation: gp-amnesia-in .45s cubic-bezier(.2, 1.4, .4, 1) 1
+}
+
+.gp-amnesia .pz-question {
+    font-size: 17px;
+    line-height: 1.45
+}
+
+.pz-left {
+    font-weight: 800;
+    color: #8a2b12
+}
+
+@keyframes gp-amnesia-in {
+    0% { transform: scale(.7) rotate(-4deg); opacity: 0 }
+    100% { transform: none; opacity: 1 }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .gp-amnesia .pz-panel {
+        animation: none
+    }
+}
+
+/* Dev only (?debug=walk): terrain anchors (red rings) and rendered sprite endpoints (green dots) */
+.gp-debug-anchor,
+.gp-debug-end {
+    position: absolute;
+    z-index: 9001;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none
+}
+
+.gp-debug-anchor {
+    width: 16px;
+    height: 16px;
+    border: 3px solid #ff3030
+}
+
+.gp-debug-end {
+    width: 6px;
+    height: 6px;
+    background: #20ff40;
+    box-shadow: 0 0 0 1px #000
+}

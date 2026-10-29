@@ -10,6 +10,7 @@ import { goToScene, useSceneEnter } from "@/lib/transition";
 import type { Chapter, HeroId } from "@/lib/types";
 import CharacterProfileModal from "./character-profile/CharacterProfileModal";
 import { useCharacters } from "@/lib/api/characters";
+import { useChapterMaps } from "@/lib/api/chapters";
 // Home screen: hero + stage selection. Stages play on their own full-screen
 // route (/chapter/1/stage/[level]), entered with a scene transition.
 export default function GameClient() {
@@ -68,7 +69,11 @@ export default function GameClient() {
       setStage(1);
     }
   }, [hero, router]);
-  const current = chapter?.levels.find((l) => l.number === stage);
+  // Stage titles come from the Chapter Map metadata (WF_BO_GET_CHAPTER_MAP),
+  // shared with the map and the stage screen; the bundled level config is
+  // only used for gameplay.
+  const chapterMaps = useChapterMaps(1);
+  const titleOf = (n: number) => chapterMaps.chapter?.maps.find((m) => m.level === n)?.title;
   return (
     <>
       {/* Full-screen backdrop + signpost (position: fixed). Kept OUTSIDE the
@@ -162,7 +167,7 @@ export default function GameClient() {
                   key={l.id}
                   disabled={l.number > max + 1}
                   onClick={() => setStage(l.number)}
-                  title={l.title}
+                  title={titleOf(l.number)}
                 >
                   {l.number}
                 </button>
@@ -174,7 +179,7 @@ export default function GameClient() {
                 disabled={!chapter}
                 onClick={() => goToScene(router, playHref(hero, stage), "forward")}
               >
-                ▶ Chơi ải {stage}: {current?.title || "..."}
+                ▶ Chơi ải {stage}: {titleOf(stage) || "..."}
               </button>
               <a
                 className="map-button"

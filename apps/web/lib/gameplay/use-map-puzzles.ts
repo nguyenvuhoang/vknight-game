@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getGuestId } from "@/lib/progress";
 import type { HeroId } from "@/lib/types";
-import type { MapPuzzle, MapPuzzlesResponse, PuzzleAnswerResponse, PuzzleApiError, PuzzleProgress, PuzzleSubmitResult } from "./puzzle-types";
+import type { MapPuzzle, MapPuzzlesResponse, PuzzleAnswerResponse, PuzzleApiError, PuzzleProgress, PuzzleRunResponse, PuzzleRunStatus, PuzzleSubmitResult } from "./puzzle-types";
 
 export type PuzzlesState = {
   status: "loading" | "ready" | "error";
@@ -14,12 +14,14 @@ export type PuzzlesState = {
   puzzles: MapPuzzle[] | null;
   progress: PuzzleProgress | null;
   error: string | null;
+  /** The server-side stage run on a run-limited map (attempt limit); null elsewhere. */
+  run: PuzzleRunStatus | null;
 };
 
 export type SubmitOutcome = { ok: true; result: PuzzleSubmitResult } | { ok: false; error: string };
 
 export function useMapPuzzles(mapCode: string, hero: HeroId, enabled = true) {
-  const [state, setState] = useState<PuzzlesState>({ status: enabled ? "loading" : "ready", puzzles: null, progress: null, error: null });
+  const [state, setState] = useState<PuzzlesState>({ status: enabled ? "loading" : "ready", puzzles: null, progress: null, error: null, run: null });
   const [attempt, setAttempt] = useState(0);
   const busy = useRef(new Set<string>());
 
@@ -38,12 +40,12 @@ export function useMapPuzzles(mapCode: string, hero: HeroId, enabled = true) {
         if (!alive) return;
         if (!res.ok || !body || !("puzzles" in body)) {
           const error = (body && "error" in body && body.error) || "Không tải được câu đố. Thử lại sau nhé!";
-          return setState({ status: "error", puzzles: null, progress: null, error });
+          return setState({ status: "error", puzzles: null, progress: null, error, run: null });
         }
         if (body.warnings.length) console.warn("[puzzles] backend definitions:", body.warnings);
-        setState({ status: "ready", puzzles: body.puzzles, progress: body.progress, error: body.puzzlesError ?? body.progressError });
+        setState({ status: "ready", puzzles: body.puzzles, progress: body.progress, error: body.puzzlesError ?? body.progressError, run: body.run ?? null });
       })
-      .catch(() => alive && setState({ status: "error", puzzles: null, progress: null, error: "Mất kết nối mạng khi tải câu đố." }));
+      .catch(() => alive && setState({ status: "error", puzzles: null, progress: null, error: "Mất kết nối mạng khi tải câu đố.", run: null }));
     return () => {
       alive = false;
     };
@@ -63,9 +65,13 @@ export function useMapPuzzles(mapCode: string, hero: HeroId, enabled = true) {
         });
         const body = (await res.json().catch(() => null)) as PuzzleAnswerResponse | PuzzleApiError | null;
         if (!res.ok || !body || !("result" in body)) {
+          // A failed run is reported with its status, so the stage can show the failure screen.
+          const failedRun = body && "run" in body ? body.run : undefined;
+          if (failedRun) setState((s) => ({ ...s, run: failedRun }));
           return { ok: false, error: (body && "error" in body && body.error) || "Không gửi được câu trả lời. Thử lại sau nhé!" };
         }
         const r = body.result;
+        const run = body.run;
         // Mirror exactly what the backend reported; never mark rewards claimed.
         setState((s) => {
           const base = s.progress ?? { mapCode, total: 0, completed: 0, puzzles: {} };
@@ -75,7 +81,7 @@ export function useMapPuzzles(mapCode: string, hero: HeroId, enabled = true) {
             ...base.puzzles,
             [puzzleCode]: { code: puzzleCode, completed: done, attempts: r.attempts, rewardClaimed: prev?.rewardClaimed ?? false, completedOn: prev?.completedOn ?? null },
           };
-          return { ...s, progress: { ...base, puzzles, completed: Object.values(puzzles).filter((p) => p.completed).length } };
+          return { ...s, run: run ?? s.run, progress: { ...base, puzzles, completed: Object.values(puzzles).filter((p) => p.completed).length } };
         });
         return { ok: true, result: r };
       } catch {
@@ -89,5 +95,24 @@ export function useMapPuzzles(mapCode: string, hero: HeroId, enabled = true) {
 
   const isSolved = useCallback((code: string) => state.progress?.puzzles[code]?.completed === true, [state.progress]);
 
-  return { ...state, submit, isSolved, retry: () => setAttempt((n) => n + 1) };
+  /** Start a new server-side run after a failed one; false (with the reason) if the server refused. */
+  const restartRun = useCallback(async (): Promise<{ ok: true } | { ok: false; error: string }> => {
+    try {
+      const res = await fetch(`/api/game/maps/${encodeURIComponent(mapCode)}/run/restart`, {
+        method: "POST",
+        headers: { "content-type": "application/json", accept: "application/json" },
+        body: JSON.stringify({ guest: getGuestId(), hero }),
+        cache: "no-store",
+      });
+      const body = (await res.json().catch(() => null)) as PuzzleRunResponse | PuzzleApiError | null;
+      if (!res.ok || !body || !("run" in body) || !body.run) return { ok: false, error: (body && "error" in body && body.error) || "Không khởi động lại được ải. Thử lại sau nhé!" };
+      const run = body.run;
+      setState((s) => ({ ...s, run }));
+      return { ok: true };
+    } catch {
+      return { ok: false, error: "Mất kết nối mạng. Thử lại sau nhé!" };
+    }
+  }, [mapCode, hero]);
+
+  return { ...state, submit, isSolved, restartRun, retry: () => setAttempt((n) => n + 1) };
 }

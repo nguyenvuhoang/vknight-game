@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import Image from "next/image";
-import type { HudArt, StageScene } from "@/lib/gameplay/stage-scenes";
+import { backdropSrc, type HudArt, type StageScene } from "@/lib/gameplay/stage-scenes";
 import type { Point } from "@/lib/scene/use-scene-walker";
 
 export type MiniMarker = {
@@ -70,7 +70,8 @@ export default function MiniMap({ title, scene, posRef, markers, icons }: Props)
         <div ref={viewRef} className="fh-minimap-view" style={{ aspectRatio: `${scene.crop.w} / ${scene.crop.h}` }}>
           <div ref={innerRef} className="fh-minimap-inner" style={{ "--z": zoom } as React.CSSProperties}>
             <Image
-              src={scene.src}
+              src={backdropSrc(scene)}
+              unoptimized={!!scene.srcVersion}
               alt=""
               width={scene.width}
               height={scene.height}

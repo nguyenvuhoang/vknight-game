@@ -1,33 +1,34 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import dynamic from "next/dynamic";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import AdventureStage from "@/components/adventure/AdventureStage";
 import GameplayStage from "@/components/gameplay/GameplayStage";
+import UnderDevelopmentStage from "@/components/stage/UnderDevelopmentStage";
 import { useChapterMaps } from "@/lib/api/chapters";
 import { useMapGameplay } from "@/lib/api/gameplay";
 import { getStageScene, mapCodeFor, type StageScene } from "@/lib/gameplay/stage-scenes";
 import { getAdventureStage } from "@/lib/adventure/stages";
 import { loadChapter } from "@/lib/catalog";
 import { mapHref, playHref } from "@/lib/chapter1";
-import { getHero } from "@/lib/heroes";
 import { completed, getGuestId, saveLocal, syncProgress } from "@/lib/progress";
+import { DEFAULT_DEV_NOTE, stageContent } from "@/lib/stage-availability";
 import { goToScene, useSceneEnter } from "@/lib/transition";
-import type { Chapter, GameNotice, HeroId } from "@/lib/types";
+import type { Chapter, HeroId } from "@/lib/types";
 
-const PhaserGame = dynamic(() => import("./PhaserGame"), { ssr: false });
+const CHAPTER = 1;
 
-// Full-screen stage: backend-driven gameplay (WF_BO_GET_MAP_GAMEPLAY) when the
-// map has a registered scene, else the local adventure-puzzle scene when the
-// level has one, otherwise the existing Phaser side-view game. Same progress source and unlock rule as
-// the home screen and chapter map.
+// Full-screen stage. Progress decides access (same unlock rule as the home
+// screen and chapter map); content readiness (lib/stage-availability) decides
+// what an unlocked stage shows: READY → backend-driven gameplay
+// (WF_BO_GET_MAP_GAMEPLAY + puzzles), with Stage 1's local adventure as an
+// opt-in offline copy; IN_DEVELOPMENT → the under-development screen. The old
+// Phaser side-view game (PhaserGame) is no longer routed to.
 export default function StageScreen({ hero, level }: { hero: HeroId; level: number }) {
   const router = useRouter();
   const root = useRef<HTMLDivElement>(null);
   const [chapter, setChapter] = useState<Chapter | null>(null);
   const [error, setError] = useState("");
   const [allowed, setAllowed] = useState(false);
-  const [notice, setNotice] = useState<GameNotice | null>(null);
   useSceneEnter(root);
 
   useEffect(() => {
@@ -43,34 +44,72 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
       .catch((e) => setError(String(e)));
   }, [hero, level, router]);
 
-  const current = chapter?.levels.find((l) => l.number === level);
-  const total = chapter?.levels.length ?? 10;
+  // Titles come from the Chapter Map metadata (WF_BO_GET_CHAPTER_MAP), like the
+  // home screen and the map; the bundled level config only supplies gameplay.
+  // Wait for it so the level object handed to the games is built once.
+  const chapterMaps = useChapterMaps(1);
+  const mapTitle = chapterMaps.chapter?.maps.find((m) => m.level === level)?.title;
+  const levelConfig = chapter?.levels.find((l) => l.number === level);
+  const current = useMemo(
+    () => (levelConfig && mapTitle ? { ...levelConfig, title: mapTitle } : levelConfig),
+    [levelConfig, mapTitle],
+  );
+  const map = chapterMaps.chapter?.maps.find((m) => m.level === level);
+  const titlesReady = chapterMaps.status !== "loading";
+  const total = chapterMaps.chapter?.maps.length || chapter?.levels.length || 10;
   const adventure = getAdventureStage(level);
   const mapCode = mapCodeFor("CHAP01", level);
   const scene = getStageScene(mapCode);
   const [offline, setOffline] = useState(false);
-  const heroInfo = getHero(hero);
-
-  const onNotice = (event: GameNotice) => {
-    setNotice(event);
-    if (event.kind === "win") {
-      saveLocal(hero, level);
-      syncProgress(getGuestId(), hero, level);
+  const content = stageContent(CHAPTER, level);
+  // Dev only: ?preview=1 plays a scene that is still IN_DEVELOPMENT, without saving progress.
+  const [devPreview, setDevPreview] = useState(false);
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "production") setDevPreview(new URLSearchParams(window.location.search).get("preview") === "1");
+  }, []);
+  // READY needs a registered scene; never fall back to unrelated legacy content.
+  const ready = (content.status === "READY" || devPreview) && !!scene;
+  useEffect(() => {
+    if (content.status === "READY" && !scene && process.env.NODE_ENV !== "production") {
+      console.warn(`[stage] ${mapCode} is READY but has no scene in stage-scenes.ts — showing the under-development screen.`);
     }
+  }, [content.status, scene, mapCode]);
+
+  // Only READY renderers can report a win; the under-development screen never does,
+  // and a dev preview of an unfinished stage never marks it complete.
+  const onWin = () => {
+    if (content.status !== "READY") {
+      console.info(`[stage] ${mapCode} preview cleared — progress not saved (stage is ${content.status}).`);
+      return;
+    }
+    saveLocal(hero, level);
+    syncProgress(getGuestId(), hero, level);
   };
   // Which renderer this level uses; exposed on the root for debugging stale bundles.
-  const mode = scene && !offline ? "backend" : adventure ? "adventure" : "classic";
+  const mode = !ready ? "in-development" : offline && adventure ? "adventure" : "backend";
   const toMap = () => goToScene(router, mapHref(hero, level), "back");
+  const toHome = () => goToScene(router, `/?hero=${hero}`, "back");
   const toNext = () =>
     level < total ? goToScene(router, playHref(hero, level + 1), "forward") : toMap();
 
   return (
     <div ref={root} className="stage-screen scene-screen" data-stage-mode={mode} data-map-code={mapCode}>
-      {error && <p className="toast">{error}</p>}
-      {!allowed || !current ? (
+      {error && ready && <p className="toast">{error}</p>}
+      {!allowed || !titlesReady || (ready && !current) ? (
         <p className="stage-loading" role="status">
           <span className="scene-spinner" aria-hidden /> Đang vào Ải {level}…
         </p>
+      ) : mode === "in-development" || !current ? (
+        <UnderDevelopmentStage
+          level={level}
+          total={total}
+          title={map?.title ?? null}
+          description={map?.description || null}
+          image={map?.image ?? null}
+          note={content.devNote ?? DEFAULT_DEV_NOTE}
+          onMap={toMap}
+          onHome={toHome}
+        />
       ) : mode === "backend" && scene ? (
         <BackendStage
           mapCode={mapCode}
@@ -81,52 +120,23 @@ export default function StageScreen({ hero, level }: { hero: HeroId; level: numb
           fallbackTitle={current.title}
           canPlayOffline={!!adventure}
           onOffline={() => setOffline(true)}
-          onWin={(text) => onNotice({ kind: "win", text })}
-          onNext={toNext}
-          onMap={toMap}
-        />
-      ) : mode === "adventure" && adventure ? (
-        <AdventureStage
-          config={adventure}
-          hero={hero}
-          level={current}
-          total={total}
-          onWin={(text) => onNotice({ kind: "win", text })}
+          onWin={onWin}
           onNext={toNext}
           onMap={toMap}
         />
       ) : (
-        <div className="stage-classic">
-          <header className="adv-top">
-            <button type="button" className="map-btn" onClick={toMap}>
-              ← <span className="map-btn-label">Bản đồ</span>
-            </button>
-            <div className="adv-top-title">
-              <strong>
-                Ải {level}/{total} — {current.title}
-              </strong>
-              <span className="adv-top-objective">🎯 Tới được lối ra cuối màn</span>
-            </div>
-            <span className="adv-hero-chip">
-              <img src={heroInfo.asset} alt="" />
-              {heroInfo.name}
-            </span>
-          </header>
-          <PhaserGame key={`${hero}:${current.id}`} hero={hero} level={current} onNotice={onNotice} />
-          <div className="dialog">
-            {notice ? notice.text : current.story}
-            {notice?.kind === "win" && (
-              <div className="actions">
-                <button type="button" className="primary" onClick={toNext}>
-                  {level < total ? "▶ Ải tiếp theo" : "🏁 Hoàn tất Chapter 1"}
-                </button>
-              </div>
-            )}
-          </div>
-          <p className="stage-keys">
-            PC: A/D hoặc ←/→ để chạy; Space để nhảy; E để nói chuyện; F dùng chiêu. Mobile: nút cảm ứng ngay dưới game.
-          </p>
-        </div>
+        // Offline copy of a READY stage's own content (Stage 1 only), chosen by the player.
+        adventure && (
+          <AdventureStage
+            config={adventure}
+            hero={hero}
+            level={current}
+            total={total}
+            onWin={onWin}
+            onNext={toNext}
+            onMap={toMap}
+          />
+        )
       )}
     </div>
   );

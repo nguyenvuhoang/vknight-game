@@ -1,0 +1,127 @@
+{
+  "mapCode": "CHAP01_MAP04",
+  "title": "Cây Cầu Lung Lay",
+  "status": "IN_DEVELOPMENT",
+  "world": {
+    "width": 1920,
+    "height": 1080,
+    "coordinates": "percentage",
+    "background": "stage04-background.png",
+    "spriteAnchor": "bottom-center",
+    "desktopFit": "contain"
+  },
+  "heroSpawn": {
+    "x": 13,
+    "y": 67
+  },
+  "npcSpawns": [
+    {
+      "code": "SPAWN_STAGE04_BRIDGE_KEEPER",
+      "x": 29,
+      "y": 65,
+      "interactionRadiusPercent": 7,
+      "asset": "bridge-keeper.png"
+    }
+  ],
+  "itemSpawns": [
+    {
+      "code": "SPAWN_STAGE04_WOOD",
+      "x": 22,
+      "y": 78,
+      "asset": "wood-planks.png"
+    },
+    {
+      "code": "SPAWN_STAGE04_ROPE",
+      "x": 35,
+      "y": 54,
+      "asset": "rope.png"
+    },
+    {
+      "code": "SPAWN_STAGE04_TOOLBOX",
+      "x": 14,
+      "y": 53,
+      "asset": "toolbox.png"
+    }
+  ],
+  "bridge": {
+    "boundsPercent": {
+      "x": 37.5,
+      "y": 65.5,
+      "width": 24.4,
+      "height": 8.3
+    },
+    "state": "BROKEN",
+    "states": {
+      "BROKEN": "bridge-broken.png",
+      "PARTIAL": "bridge-partial.png",
+      "REPAIRED": "bridge-repaired.png"
+    },
+    "crossableOnlyWhen": "REPAIRED",
+    "repairPuzzleCodes": [
+      "MAP_PUZZLE_STAGE04_WOOD",
+      "MAP_PUZZLE_STAGE04_ROPE",
+      "MAP_PUZZLE_STAGE04_TOOLBOX"
+    ]
+  },
+  "exit": {
+    "spawn_code": "SPAWN_STAGE04_EXIT",
+    "position_x": 89,
+    "position_y": 65,
+    "unlock_condition": {
+      "type": "OBJECTIVE_COMPLETED",
+      "objective_code": "OBJ_STAGE04_REPAIR_BRIDGE"
+    },
+    "asset": "exit-marker.png"
+  },
+  "collisionGuidance": {
+    "river": {
+      "type": "BLOCKED",
+      "polygonPercent": [
+        [
+          40,
+          44
+        ],
+        [
+          60,
+          44
+        ],
+        [
+          63,
+          58
+        ],
+        [
+          59,
+          75
+        ],
+        [
+          63,
+          100
+        ],
+        [
+          37,
+          100
+        ],
+        [
+          41,
+          75
+        ],
+        [
+          37,
+          58
+        ]
+      ]
+    },
+    "bridgeDeck": {
+      "type": "DYNAMIC_WALKABLE",
+      "rectPercent": [
+        38,
+        65.5,
+        24,
+        8
+      ],
+      "enabledOnlyWhen": "REPAIRED"
+    },
+    "ground": "Define navmesh/walkable polygons from final artwork; illustrative only"
+  },
+  "warning": "Game engine must implement bridge phases and gate pathfinding; art and JSON alone do not create interactions."
+}

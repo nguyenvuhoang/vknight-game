@@ -16,6 +16,8 @@ type Props = {
   /** Server progress already says solved (e.g. answered before a reload). */
   solved: boolean;
   attempts: number;
+  /** Run-limited map: this puzzle's wrong answers in the current run, and the limit. */
+  runLimit?: { wrong: number; max: number } | null;
   onSubmit: (answer: string) => Promise<SubmitOutcome>;
   /** Pick the item up (local inventory) and close. */
   onCollect: () => void;
@@ -37,7 +39,7 @@ function shuffled<T>(list: T[], seed: string): T[] {
   return out;
 }
 
-export default function PuzzlePanel({ puzzle, itemName, itemImage, solved, attempts, onSubmit, onCollect, onClose }: Props) {
+export default function PuzzlePanel({ puzzle, itemName, itemImage, solved, attempts, runLimit = null, onSubmit, onCollect, onClose }: Props) {
   const titleId = useId();
   const [parts, setParts] = useState<PuzzleOption[]>([]);
   const [busy, setBusy] = useState(false);
@@ -47,7 +49,8 @@ export default function PuzzlePanel({ puzzle, itemName, itemImage, solved, attem
   const panelRef = useRef<HTMLDivElement>(null);
 
   const done = solved || result?.correct === true || result?.alreadyCompleted === true;
-  const blocked = !done && result != null && !result.correct && !result.canRetry;
+  const runLeft = runLimit ? Math.max(0, runLimit.max - runLimit.wrong) : null;
+  const blocked = !done && ((result != null && !result.correct && !result.canRetry) || runLeft === 0);
   const need = puzzle.type === "MULTIPLE_CHOICE" ? 1 : puzzle.type === "WORD_ORDER" ? puzzle.options.length : puzzle.sequence.length;
   const ready = parts.length === need && !busy && !done && !blocked;
 
@@ -114,7 +117,8 @@ export default function PuzzlePanel({ puzzle, itemName, itemImage, solved, attem
                 <div className="pz-feedback is-fail" role="alert">
                   <strong>✖ Chưa đúng</strong>
                   <span>{result.message ?? "Sai rồi, thử lại nhé!"}</span>
-                  {blocked && <span>Đã hết lượt thử cho câu đố này.</span>}
+                  {runLeft != null && runLeft > 0 && <span className="pz-left">Còn {runLeft} lần thử trước khi mất trí nhớ!</span>}
+                  {runLeft === 0 ? <span className="pz-left">Hết lượt! Não đang tự khởi động lại…</span> : blocked && <span>Đã hết lượt thử cho câu đố này.</span>}
                 </div>
               )}
               {error && (
@@ -126,7 +130,7 @@ export default function PuzzlePanel({ puzzle, itemName, itemImage, solved, attem
           )}
 
           <div className="pz-meta">
-            <span>Lần thử: {shownAttempts}</span>
+            {runLimit ? <span>Lượt sai: {runLimit.wrong}/{runLimit.max}</span> : <span>Lần thử: {shownAttempts}</span>}
             {result?.remainingAttempts != null && !done && <span>Còn {result.remainingAttempts} lượt</span>}
             {puzzle.hint && !done && (
               <button type="button" className="pz-link" onClick={() => setHint((h) => !h)} aria-expanded={hint}>

@@ -8,6 +8,7 @@ import path from "node:path";
 import { NextResponse } from "next/server";
 import { adaptGameplay, parseMapConfig, unresolvedInteractTargets } from "@/lib/gameplay/gameplay-adapter";
 import type { MapGameplayError, MapGameplayResponse } from "@/lib/gameplay/gameplay-types";
+import { sceneInteractTargets } from "@/lib/gameplay/stage-scenes";
 import { chapterNumberOf, loadChapter } from "@/lib/server/chapter-source";
 import { callWorkflow, GatewayError, WORKFLOWS } from "@/lib/server/o24-gateway";
 
@@ -64,7 +65,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ mapCode
     ? parseMapConfig(chapter.mapConfigs[mapCode] ?? null, (m) => configWarnings.push(m), `${mapCode}.gameplay_config`)
     : { exits: [] };
 
-  const result = adaptGameplay(data, mapCode, assetExists, config);
+  const sceneTargets = sceneInteractTargets(mapCode);
+  const result = adaptGameplay(data, mapCode, assetExists, config, sceneTargets);
   if (!result.ok) {
     console.warn(`[api/game/maps/${mapCode}/gameplay] ${result.code}: ${result.reason}`);
     if (result.code === "not_found") return fail(404, "not_found", "Màn chơi này chưa có dữ liệu.");
@@ -72,7 +74,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ mapCode
   }
   // Map config unavailable but an objective needs an exit: fail (retryable, not cached)
   // rather than serve a stage that can never be completed.
-  const unresolved = unresolvedInteractTargets(result.gameplay);
+  const unresolved = unresolvedInteractTargets(result.gameplay, sceneTargets);
   if (!chapter?.ok && unresolved.length) {
     console.error(`[api/game/maps/${mapCode}/gameplay] map config unavailable; unresolved INTERACT targets:`, unresolved);
     return fail(502, "unavailable", "Không tải được cấu hình lối ra của màn chơi. Thử lại sau nhé!");

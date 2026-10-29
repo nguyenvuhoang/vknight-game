@@ -1,0 +1,26 @@
+{
+  "map_code": "CHAP01_MAP04",
+  "name": "Cây Cầu Lung Lay",
+  "background": "stage04-background.png",
+  "world_width_px": 1916,
+  "world_height_px": 431,
+  "bridge_overlay_bounds_px": {
+    "x": 600,
+    "y": 165,
+    "width": 820,
+    "height": 232
+  },
+  "bridge_overlay_bounds_percent": {
+    "x": 31.315,
+    "y": 38.283,
+    "width": 42.797,
+    "height": 53.828
+  },
+  "bridge_states": {
+    "BROKEN": "bridge-broken-aligned.png",
+    "PARTIAL": "bridge-partial-aligned.png",
+    "REPAIRED": "bridge-repaired-aligned.png"
+  },
+  "walkable_policy": "Only REPAIRED creates walkable bridge deck; collision must be computed independently from visual sprites.",
+  "important": "Align sprites visually in browser. Source bridge sprites are extracted from concept and can require repaint; previews demonstrate placement, not validated collision."
+}

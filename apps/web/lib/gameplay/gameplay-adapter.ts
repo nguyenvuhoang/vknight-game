@@ -57,6 +57,11 @@ export function parseCondition(raw: unknown, warn: (m: string) => void = () => {
       return isStr(v.choice_id) ? { type: v.type, choice_id: v.choice_id } : bad("missing choice_id");
     case "INTERACT":
       return isStr(v.target_code) ? { type: v.type, target_code: v.target_code } : bad("missing target_code");
+    case "NPC_TALKED": {
+      // Talking to an NPC is recorded as an INTERACT on its code (interaction-engine).
+      const npc = isStr(v.target_code) ? v.target_code : isStr(v.npc_code) ? v.npc_code : null;
+      return npc ? { type: "INTERACT", target_code: npc } : bad("missing target_code");
+    }
     case "ALL": {
       if (!Array.isArray(v.conditions) || !v.conditions.length) return bad("ALL needs conditions[]");
       return {
@@ -141,8 +146,8 @@ export function parseMapConfig(raw: unknown, warn: (m: string) => void = () => {
 }
 
 /** INTERACT targets used by objectives that no NPC/exit provides (stage would be unwinnable). */
-export function unresolvedInteractTargets(g: MapGameplay): string[] {
-  const have = new Set([...g.exits.map((e) => e.spawnCode), ...g.npcs.flatMap((n) => [n.code, n.spawnCode])]);
+export function unresolvedInteractTargets(g: MapGameplay, sceneTargets: string[] = []): string[] {
+  const have = new Set([...g.exits.map((e) => e.spawnCode), ...g.npcs.flatMap((n) => [n.code, n.spawnCode]), ...sceneTargets]);
   const out = new Set<string>();
   const visit = (c: Condition | null) => {
     if (c?.type === "INTERACT" && !have.has(c.target_code)) out.add(c.target_code);
@@ -165,6 +170,8 @@ export function adaptGameplay(
   requestedMapCode: string,
   assetExists: (url: string) => boolean = () => true,
   config: MapGameplayConfig = { exits: [] },
+  /** INTERACT targets the stage scene provides (e.g. a repairable bridge), see sceneInteractTargets. */
+  sceneTargets: string[] = [],
 ): AdaptGameplayResult {
   if (!isObj(data) || !("gameplay" in data)) return { ok: false, code: "format", reason: "missing data.gameplay" };
   const g = data.gameplay;
@@ -289,12 +296,12 @@ export function adaptGameplay(
     }
   }
 
-  // INTERACT targets must resolve to an exit or NPC, or the objective can never complete.
+  // INTERACT targets must resolve to an exit, NPC or scene object, or the objective can never complete.
   const exits = config.exits;
-  const targets = new Set([...exits.map((e) => e.spawnCode), ...npcs.flatMap((n) => [n.code, n.spawnCode])]);
+  const targets = new Set([...exits.map((e) => e.spawnCode), ...npcs.flatMap((n) => [n.code, n.spawnCode]), ...sceneTargets]);
   const visit = (c: Condition | null, at: string) => {
     if (!c) return;
-    if (c.type === "INTERACT" && !targets.has(c.target_code)) warn(`${at}: INTERACT target ${c.target_code} is not configured (no exit/NPC)`);
+    if (c.type === "INTERACT" && !targets.has(c.target_code)) warn(`${at}: INTERACT target ${c.target_code} is not configured (no exit/NPC/scene object)`);
     if (c.type === "ALL") c.conditions.forEach((x) => visit(x, at));
   };
   for (const o of objectives) {

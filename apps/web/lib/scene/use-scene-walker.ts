@@ -2,10 +2,13 @@
 // Shared walking / camera / grounding loop for full-screen stage scenes.
 // Positions are % of the world (x of width, y of height); characters are
 // anchored by their feet. Writes to the DOM each frame (no re-render per frame).
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { buildWalkGrid } from "./walk-grid";
 
 export type Point = { x: number; y: number };
 export type WalkRect = { x0: number; x1: number; y0: number; y1: number };
+/** Ground area that changes movement while the hero stands in it (e.g. a mud trap). */
+export type WalkZone = { id: string; rect: WalkRect; speed: number };
 /** active: keys + click-to-walk · paused: frozen (dialogue open) · scripted: only scripted walks, no input. */
 export type WalkerMode = "active" | "paused" | "scripted";
 
@@ -27,9 +30,21 @@ type Options = {
   nearRadius?: number;
   /** % of scene width per second. */
   speed?: number;
+  /** Solid footprints inside the walkable ground (objects the hero walks around). */
+  blocked?: WalkRect[];
+  /** Click-to-walk follows the ground (bridges, around water/objects) instead of a straight line. */
+  pathfind?: boolean;
+  zones?: WalkZone[];
+  /** Called when the hero enters (id) or leaves (null) a zone. */
+  onZone?: (id: string | null) => void;
+  /**
+   * Let the camera pan this far (fraction of the screen width) past the world's
+   * right edge, so things at the edge can be brought clear of HUD panels there.
+   */
+  rightPad?: number;
 };
 
-export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius = 7, speed = 24 }: Options) {
+export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius = 7, speed = 24, blocked, pathfind = false, zones, onZone, rightPad = 0 }: Options) {
   const sceneRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
   const playerRef = useRef<HTMLDivElement>(null);
@@ -41,8 +56,15 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
   const keys = useRef(new Set<string>());
   const facing = useRef(1);
   const cam = useRef<{ x: number; y: number } | null>(null);
-  const opts = useRef({ mode, targets });
-  opts.current = { mode, targets };
+  const route = useRef<Point[]>([]);
+  const opts = useRef({ mode, targets, zones, onZone });
+  opts.current = { mode, targets, zones, onZone };
+  // Scenes with split ground (water, bridges, solid objects) get a walk grid;
+  // the others keep plain rectangle clamping.
+  const grid = useMemo(
+    () => (pathfind || blocked?.length ? buildWalkGrid(walk, blocked ?? [], aspect) : null),
+    [pathfind, blocked, walk, aspect],
+  );
   const [near, setNear] = useState<string | null>(null);
 
   const yMin = Math.min(...walk.map((r) => r.y0));
@@ -61,9 +83,9 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
         const d = Math.hypot(q.x - p.x, (q.y - p.y) / aspect);
         if (d < bestD) [best, bestD] = [q, d];
       }
-      return best;
+      return grid && !grid.walkable(best) ? grid.nearest(best) ?? best : best;
     },
-    [walk, aspect],
+    [walk, aspect, grid],
   );
 
   /** Visual distance (in % of width) from the hero to a point. */
@@ -76,21 +98,28 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
   const walkTo = useCallback(
     (p: Point, onArrive?: () => void, { clamp = true }: { clamp?: boolean } = {}) => {
       const dest = clamp ? clampWalk(p) : { ...p };
+      route.current = [];
       if (Math.hypot(dest.x - pos.current.x, (dest.y - pos.current.y) / aspect) < 2) {
         target.current = null;
         arrive.current = null;
         onArrive?.();
         return;
       }
-      target.current = dest;
+      if (clamp && grid) {
+        const steps = grid.path(pos.current, dest);
+        if (!steps.length) return;
+        route.current = steps.slice(1);
+        target.current = steps[0];
+      } else target.current = dest;
       arrive.current = onArrive ?? null;
     },
-    [aspect, clampWalk],
+    [aspect, clampWalk, grid],
   );
 
   const cancelWalk = useCallback(() => {
     target.current = null;
     arrive.current = null;
+    route.current = [];
   }, []);
 
   /** Click on the world: walk there (no action on arrival). */
@@ -141,12 +170,15 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
     let raf = 0;
     let last = performance.now();
     let lastNear: string | null = null;
+    let lastZone: string | null = null;
     const frame = (t: number) => {
       const dt = Math.min(0.05, (t - last) / 1000);
       last = t;
       const m = opts.current.mode();
       const p = pos.current;
       let moving = false;
+      const zone = opts.current.zones?.find((z) => p.x >= z.rect.x0 && p.x <= z.rect.x1 && p.y >= z.rect.y0 && p.y <= z.rect.y1) ?? null;
+      const v = speed * (zone?.speed ?? 1);
       if (m !== "paused") {
         let dx = 0, dy = 0;
         if (m === "active") {
@@ -158,16 +190,26 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
         if (dx || dy) {
           cancelWalk();
           const n = Math.hypot(dx, dy);
-          const next = clampWalk({ x: p.x + (dx / n) * speed * dt, y: p.y + (dy / n) * speed * aspect * dt });
+          const raw = { x: p.x + (dx / n) * v * dt, y: p.y + (dy / n) * v * aspect * dt };
+          let next = clampWalk(raw);
+          // Solid ground objects: slide along them, never step into them or jump across.
+          if (grid && (!grid.walkable(next) || Math.hypot(next.x - p.x, next.y - p.y) > 3)) {
+            const alt = [clampWalk({ x: raw.x, y: p.y }), clampWalk({ x: p.x, y: raw.y })].find((q) => grid.walkable(q) && Math.hypot(q.x - p.x, q.y - p.y) <= 3);
+            next = alt ?? p;
+          }
           moving = next.x !== p.x || next.y !== p.y;
           if (dx) facing.current = Math.sign(dx);
           pos.current = next;
         } else if (target.current) {
           const tg = target.current;
           const vx = tg.x - p.x, vy = (tg.y - p.y) / aspect;
-          const dist = Math.hypot(vx, vy), step = speed * dt;
+          const dist = Math.hypot(vx, vy), step = v * dt;
           if (Math.abs(vx) > 0.2) facing.current = Math.sign(vx);
-          if (dist <= step) {
+          if (dist <= step && route.current.length) {
+            pos.current = { ...tg };
+            target.current = route.current.shift()!;
+            moving = true;
+          } else if (dist <= step) {
             pos.current = { ...tg };
             target.current = null;
             const cb = arrive.current;
@@ -194,7 +236,7 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
       const sc = sceneRef.current, w = worldRef.current;
       if (sc && w) {
         const sw = sc.clientWidth, sh = sc.clientHeight, ww = w.offsetWidth, wh = w.offsetHeight;
-        const tx = Math.min(0, Math.max(sw - ww, sw / 2 - (q.x / 100) * ww));
+        const tx = Math.min(0, Math.max(sw - ww - sw * rightPad, sw / 2 - (q.x / 100) * ww));
         let ty = Math.min(0, Math.max(sh - wh, sh * 0.55 - (Math.min(q.y, yMax) / 100) * wh));
         // Narrow screens size the world to the gap between HUD and dock: centre it there.
         if (wh < sh && hudRef.current && dockRef.current) {
@@ -219,6 +261,11 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
           if (d < nd) [nearest, nd] = [tg.id, d];
         }
       }
+      const zoneNow = opts.current.zones?.find((z) => pos.current.x >= z.rect.x0 && pos.current.x <= z.rect.x1 && pos.current.y >= z.rect.y0 && pos.current.y <= z.rect.y1)?.id ?? null;
+      if (zoneNow !== lastZone) {
+        lastZone = zoneNow;
+        opts.current.onZone?.(zoneNow);
+      }
       if (nearest !== lastNear) {
         lastNear = nearest;
         setNear(nearest);
@@ -227,7 +274,7 @@ export function useSceneWalker({ aspect, walk, spawn, mode, targets, nearRadius 
     };
     raf = requestAnimationFrame(frame);
     return () => cancelAnimationFrame(raf);
-  }, [aspect, cancelWalk, clampWalk, depthAt, nearRadius, speed, yMax]);
+  }, [aspect, cancelWalk, clampWalk, depthAt, nearRadius, speed, yMax, grid, rightPad]);
 
   return {
     sceneRef, worldRef, playerRef, hudRef, dockRef,
